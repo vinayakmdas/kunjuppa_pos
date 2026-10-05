@@ -237,38 +237,76 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
 
+                // Auto-f
                 // Auto-fill button
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkInputBg,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.darkCardBorder),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('Email: admin@example.com', style: TextStyle(color: AppColors.primaryLight, fontSize: 11, fontFamily: 'monospace')),
-                          Text('Pass: Admin@123', style: TextStyle(color: AppColors.primaryLight, fontSize: 11, fontFamily: 'monospace')),
-                        ],
-                      ),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primaryLight,
-                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        onPressed: _autoFillDemo,
-                        icon: const Icon(LucideIcons.sparkles, size: 14),
-                        label: const Text('Auto-fill', style: TextStyle(fontSize: 11)),
-                      ),
-                    ],
-                  ),
-                ),
+Container(
+  padding: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: AppColors.darkInputBg,
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(
+      color: AppColors.darkCardBorder,
+    ),
+  ),
+  child: Row(
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Email: admin@example.com',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.primaryLight,
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+            Text(
+              'Pass: Admin@123',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.primaryLight,
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 8),
+
+      OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryLight,
+          side: BorderSide(
+            color: AppColors.primary.withValues(alpha: 0.4),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 6,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        onPressed: _autoFillDemo,
+        icon: const Icon(
+          LucideIcons.sparkles,
+          size: 14,
+        ),
+        label: const Text(
+          'Auto-fill',
+          style: TextStyle(fontSize: 11),
+        ),
+      ),
+    ],
+  ),
+),
                 const SizedBox(height: 16),
 
                 const Text(

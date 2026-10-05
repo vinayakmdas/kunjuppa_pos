@@ -8,6 +8,7 @@ import '../models/cart_item.dart';
 import '../models/customer.dart';
 import '../models/order.dart';
 import '../models/pending_order.dart';
+import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/order_provider.dart';
@@ -66,6 +67,188 @@ class _PosScreenState extends State<PosScreen> {
     _custAddressController.dispose();
     super.dispose();
   }
+
+  // ───────────────────────── product card ─────────────────────────
+
+  void _addOne(Product product, CartProvider cartProv) {
+    final res = cartProv.addItem(product, 1);
+    if (res['success'] != true && res['message'] != null) {
+      _showSnackBar(res['message'], isError: true);
+    }
+  }
+
+  void _removeOne(CartItem item, CartProvider cartProv) {
+    final newQty = item.quantity - 1;
+    if (newQty <= 0) {
+      // count reached 0 -> unselect the product
+      cartProv.removeItem(item.productId);
+    } else {
+      cartProv.updateQuantity(item.productId, newQty);
+    }
+  }
+
+  Widget _stepperButton(IconData icon, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: 36,
+        height: 32,
+        child: Icon(icon, size: 16, color: color),
+      ),
+    );
+  }
+
+  Widget _buildProductCard(
+    Product product,
+    CartProvider cartProv,
+    BusinessSettings settings,
+  ) {
+    final isOut = product.stockQuantity <= 0;
+    final cartItem = cartProv.items.where((i) => i.productId == product.id).firstOrNull;
+    final inCart = cartItem != null;
+
+    return InkWell(
+      onTap: isOut
+          ? () => _showSnackBar('"${product.name}" is out of stock.', isError: true)
+          : () => _addOne(product, cartProv),
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+        decoration: BoxDecoration(
+          color: inCart ? AppColors.primary.withValues(alpha: 0.08) : AppColors.darkCard,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: inCart ? AppColors.primaryLight : AppColors.darkCardBorder,
+            width: inCart ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Name
+            Text(
+              product.name,
+              style: TextStyle(
+                color: inCart ? AppColors.primaryLight : AppColors.darkText,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'SKU: ${product.sku}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontFamily: 'monospace'),
+            ),
+            const Spacer(),
+
+            // Price + stock
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    Formatters.formatCurrency(product.sellingPrice, settings.currencySymbol),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppColors.primaryLight, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isOut ? AppColors.danger.withValues(alpha: 0.2) : AppColors.darkInputBg,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isOut ? 'Out of stock' : '${product.stockQuantity} ${product.unit}',
+                    style: TextStyle(
+                      color: isOut ? Colors.redAccent : AppColors.darkSubtext,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Bottom action area (fixed height so all cards stay aligned)
+            SizedBox(
+              height: 32,
+              child: inCart
+                  ? Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.darkInputBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.6)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _stepperButton(
+                            LucideIcons.minus,
+                            AppColors.darkText,
+                            () => _removeOne(cartItem, cartProv),
+                          ),
+                          Text(
+                            '${cartItem.quantity}',
+                            style: const TextStyle(
+                              color: AppColors.darkText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          _stepperButton(
+                            LucideIcons.plus,
+                            AppColors.primaryLight,
+                            () => _addOne(product, cartProv),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isOut ? AppColors.darkInputBg : AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isOut ? LucideIcons.packageX : LucideIcons.plus,
+                            size: 14,
+                            color: isOut ? AppColors.darkSubtext : AppColors.primaryLight,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isOut ? 'Unavailable' : 'Add',
+                            style: TextStyle(
+                              color: isOut ? AppColors.darkSubtext : AppColors.primaryLight,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ───────────────────────── build ─────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -195,131 +378,17 @@ class _PosScreenState extends State<PosScreen> {
                                   child: Text('No products found.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
                                 )
                               : GridView.builder(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(10),
                                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: isDesktop ? 4 : 2,
-                                    childAspectRatio: 0.9,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 10,
+                                    // fixed card height -> no more empty space inside / between cards
+                                    mainAxisExtent: 128,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
                                   ),
                                   itemCount: filteredProducts.length,
-                                   itemBuilder: (context, idx) {
-                                    final product = filteredProducts[idx];
-                                    final isOut = product.stockQuantity <= 0;
-                                    // Check if this product is already in the cart
-                                    final cartItem = cartProv.items
-                                        .where((i) => i.productId == product.id)
-                                        .firstOrNull;
-                                    final inCart = cartItem != null;
-                                    final cartQty = cartItem?.quantity ?? 0;
-
-                                    return InkWell(
-                                      onTap: isOut
-                                          ? () => _showSnackBar('"${product.name}" is out of stock.', isError: true)
-                                          : () {
-                                              final res = cartProv.addItem(product, 1);
-                                              if (res['success'] != true && res['message'] != null) {
-                                                _showSnackBar(res['message'], isError: true);
-                                              }
-                                              // DO NOT auto-navigate to cart tab;
-                                              // user stays on catalog to keep adding items.
-                                            },
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Stack(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: inCart
-                                                  ? AppColors.primary.withValues(alpha: 0.08)
-                                                  : AppColors.darkCard,
-                                              borderRadius: BorderRadius.circular(14),
-                                              border: Border.all(
-                                                color: inCart
-                                                    ? AppColors.primaryLight
-                                                    : AppColors.darkCardBorder,
-                                                width: inCart ? 1.5 : 1.0,
-                                              ),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      product.name,
-                                                      style: TextStyle(
-                                                        color: inCart ? AppColors.primaryLight : AppColors.darkText,
-                                                        fontSize: 13,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                      maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      'SKU: ${product.sku}',
-                                                      style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontFamily: 'monospace'),
-                                                    ),
-                                                  ],
-                                                ),
-                                                Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      Formatters.formatCurrency(product.sellingPrice, settings.currencySymbol),
-                                                      style: const TextStyle(color: AppColors.primaryLight, fontSize: 14, fontWeight: FontWeight.bold),
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: isOut ? AppColors.danger.withValues(alpha: 0.2) : AppColors.darkInputBg,
-                                                        borderRadius: BorderRadius.circular(6),
-                                                      ),
-                                                      child: Text(
-                                                        isOut ? 'Out of stock' : '${product.stockQuantity} ${product.unit}',
-                                                        style: TextStyle(
-                                                          color: isOut ? Colors.redAccent : AppColors.darkSubtext,
-                                                          fontSize: 9,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          // Quantity badge shown when item is in cart
-                                          if (inCart)
-                                            Positioned(
-                                              top: 6,
-                                              right: 6,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.primary,
-                                                  borderRadius: BorderRadius.circular(10),
-                                                  boxShadow: const [
-                                                    BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2)),
-                                                  ],
-                                                ),
-                                                child: Text(
-                                                  '$cartQty',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    );
+                                  itemBuilder: (context, idx) {
+                                    return _buildProductCard(filteredProducts[idx], cartProv, settings);
                                   },
                                 ),
                         ),
@@ -479,7 +548,7 @@ class _PosScreenState extends State<PosScreen> {
                                                       constraints: const BoxConstraints(),
                                                       padding: const EdgeInsets.all(4),
                                                       icon: const Icon(LucideIcons.minusCircle, size: 18, color: AppColors.darkSubtext),
-                                                      onPressed: () => cartProv.updateQuantity(item.productId, item.quantity - 1),
+                                                      onPressed: () => _removeOne(item, cartProv),
                                                     ),
                                                     Padding(
                                                       padding: const EdgeInsets.symmetric(horizontal: 8),

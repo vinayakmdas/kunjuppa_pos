@@ -555,28 +555,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Widget _filterChip(String id, String label) {
-    final selected = _stockFilter == id;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        showCheckmark: false,
-        selectedColor: AppColors.primary.withValues(alpha: 0.25),
-        backgroundColor: AppColors.darkCard,
-        side: BorderSide(color: selected ? AppColors.primaryLight : AppColors.darkCardBorder),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        labelStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: selected ? AppColors.primaryLight : AppColors.darkSubtext,
-        ),
-        onSelected: (_) => setState(() => _stockFilter = id),
-      ),
-    );
-  }
-
   Widget _productCard(Product p, SettingsProvider settingsProv, ProductProvider productProv) {
     final settings = settingsProv.settings;
     final status = _statusOf(p, settings.lowStockThreshold);
@@ -867,178 +845,174 @@ class _ProductsScreenState extends State<ProductsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title
-              Row(
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          child: CustomScrollView(
+            slivers: [
+              // Everything above the list now scrolls with the list
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Row(
                       children: [
-                        Text(
-                          'Products',
-                          style: TextStyle(color: AppColors.darkText, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Products',
+                                style: TextStyle(color: AppColors.darkText, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                              ),
+                              SizedBox(height: 2),
+                              Text('Manage your catalog and stock', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
+                            ],
+                          ),
                         ),
-                        SizedBox(height: 2),
-                        Text('Manage your catalog and stock', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-              // Stats (tap to filter)
-              Row(
-                children: [
-                  _statTile(
-                    label: 'Active items',
-                    value: activeList.length,
-                    icon: LucideIcons.package,
-                    color: AppColors.primaryLight,
-                    selected: _stockFilter == 'all',
-                    onTap: () => setState(() => _stockFilter = 'all'),
-                  ),
-                  const SizedBox(width: 10),
-                  _statTile(
-                    label: 'Low stock',
-                    value: lowCount,
-                    icon: LucideIcons.triangleAlert,
-                    color: AppColors.warning,
-                    selected: _stockFilter == 'low_stock',
-                    onTap: () => setState(() {
-                      _activeTab = 'active';
-                      _stockFilter = _stockFilter == 'low_stock' ? 'all' : 'low_stock';
-                    }),
-                  ),
-                  const SizedBox(width: 10),
-                  _statTile(
-                    label: 'Out of stock',
-                    value: outCount,
-                    icon: LucideIcons.packageX,
-                    color: AppColors.danger,
-                    selected: _stockFilter == 'out_of_stock',
-                    onTap: () => setState(() {
-                      _activeTab = 'active';
-                      _stockFilter = _stockFilter == 'out_of_stock' ? 'all' : 'out_of_stock';
-                    }),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Tabs
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.darkCardBorder),
-                ),
-                child: Row(
-                  children: [
-                    _tabButton('active', 'Active', activeList.length),
-                    const SizedBox(width: 4),
-                    _tabButton('archived', 'Archived', archivedCount),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Search + category
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      decoration: _fieldDecoration('Search', hint: 'Name, SKU or barcode', icon: LucideIcons.search).copyWith(
-                        labelText: null,
-                        suffixIcon: _searchQuery.isEmpty
-                            ? null
-                            : IconButton(
-                                icon: const Icon(LucideIcons.x, size: 16, color: AppColors.darkSubtext),
-                                onPressed: () => setState(() {
-                                  _searchController.clear();
-                                  _searchQuery = '';
-                                }),
-                              ),
-                      ),
+                    // Stats (tap to filter)
+                    Row(
+                      children: [
+                        _statTile(
+                          label: 'Active items',
+                          value: activeList.length,
+                          icon: LucideIcons.package,
+                          color: AppColors.primaryLight,
+                          selected: _stockFilter == 'all',
+                          onTap: () => setState(() => _stockFilter = 'all'),
+                        ),
+                        const SizedBox(width: 10),
+                        _statTile(
+                          label: 'Low stock',
+                          value: lowCount,
+                          icon: LucideIcons.triangleAlert,
+                          color: AppColors.warning,
+                          selected: _stockFilter == 'low_stock',
+                          onTap: () => setState(() {
+                            _activeTab = 'active';
+                            _stockFilter = _stockFilter == 'low_stock' ? 'all' : 'low_stock';
+                          }),
+                        ),
+                        const SizedBox(width: 10),
+                        _statTile(
+                          label: 'Out of stock',
+                          value: outCount,
+                          icon: LucideIcons.packageX,
+                          color: AppColors.danger,
+                          selected: _stockFilter == 'out_of_stock',
+                          onTap: () => setState(() {
+                            _activeTab = 'active';
+                            _stockFilter = _stockFilter == 'out_of_stock' ? 'all' : 'out_of_stock';
+                          }),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 170),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    const SizedBox(height: 16),
+
+                    // Tabs
+                    Container(
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.darkCard,
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: AppColors.darkCardBorder),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: _categoryFilter,
-                          dropdownColor: AppColors.darkCard,
-                          borderRadius: BorderRadius.circular(14),
-                          icon: const Icon(LucideIcons.chevronDown, size: 16, color: AppColors.darkSubtext),
-                          items: categories
-                              .map(
-                                (c) => DropdownMenuItem(
-                                  value: c,
-                                  child: Text(
-                                    c == 'All' ? 'All categories' : c,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12.5, color: AppColors.darkText),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) {
-                            if (val != null) setState(() => _categoryFilter = val);
-                          },
-                        ),
+                      child: Row(
+                        children: [
+                          _tabButton('active', 'Active', activeList.length),
+                          const SizedBox(width: 4),
+                          _tabButton('archived', 'Archived', archivedCount),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                    const SizedBox(height: 12),
 
-              // Stock chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _filterChip('all', 'All'),
-                    _filterChip('in_stock', 'In stock'),
-                    _filterChip('low_stock', 'Low stock'),
-                    _filterChip('out_of_stock', 'Out of stock'),
+                    // Search + category
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            style: const TextStyle(color: AppColors.darkText, fontSize: 13),
+                            onChanged: (val) => setState(() => _searchQuery = val),
+                            decoration: _fieldDecoration('Search', hint: 'Name, SKU or barcode', icon: LucideIcons.search).copyWith(
+                              labelText: null,
+                              suffixIcon: _searchQuery.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(LucideIcons.x, size: 16, color: AppColors.darkSubtext),
+                                      onPressed: () => setState(() {
+                                        _searchController.clear();
+                                        _searchQuery = '';
+                                      }),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 170),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.darkCardBorder),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                value: _categoryFilter,
+                                dropdownColor: AppColors.darkCard,
+                                borderRadius: BorderRadius.circular(14),
+                                icon: const Icon(LucideIcons.chevronDown, size: 16, color: AppColors.darkSubtext),
+                                items: categories
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c,
+                                        child: Text(
+                                          c == 'All' ? 'All categories' : c,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 12.5, color: AppColors.darkText),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _categoryFilter = val);
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
 
               // Result list
-              Expanded(
-                child: filtered.isEmpty
-                    ? _emptyState(hasFilters)
-                    : GridView.builder(
-                        padding: const EdgeInsets.only(top: 4, bottom: 96),
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 540,
-                          mainAxisExtent: 98,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 10,
-                        ),
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) => _productCard(filtered[i], settingsProv, productProv),
-                      ),
-              ),
+              if (filtered.isEmpty)
+                SliverToBoxAdapter(child: _emptyState(hasFilters))
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 96),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 540,
+                      mainAxisExtent: 98,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 10,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => _productCard(filtered[i], settingsProv, productProv),
+                      childCount: filtered.length,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
