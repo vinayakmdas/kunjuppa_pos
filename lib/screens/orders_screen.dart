@@ -41,145 +41,232 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  DataColumn _col(String label) => DataColumn(
+        label: Text(
+          label,
+          style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold),
+        ),
+      );
+
+  Widget _actionButton(IconData icon, Color color, VoidCallback onPressed) {
+    return IconButton(
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      icon: Icon(icon, size: 16, color: color),
+      onPressed: onPressed,
+    );
+  }
+
+  void _toggleSelected(String id, bool selected) {
+    setState(() {
+      if (selected) {
+        if (!_selectedIds.contains(id)) _selectedIds.add(id);
+      } else {
+        _selectedIds.remove(id);
+      }
+    });
+  }
+
   void _showOrderDetailsModal(BuildContext context, Order order) {
     final settings = context.read<SettingsProvider>().settings;
 
     showDialog(
       context: context,
       builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
         backgroundColor: AppColors.darkCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 550,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 550),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text('Order Details: ${order.orderNumber}', style: const TextStyle(color: AppColors.darkText, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                      Text('Placed on ${Formatters.formatDateTime(order.createdAt)}', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Order Details: ${order.orderNumber}',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: AppColors.darkText, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                            ),
+                            Text(
+                              'Placed on ${Formatters.formatDateTime(order.createdAt)}',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(LucideIcons.x, size: 18, color: AppColors.darkSubtext),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     ],
                   ),
-                  IconButton(icon: const Icon(LucideIcons.x, size: 18, color: AppColors.darkSubtext), onPressed: () => Navigator.of(context).pop()),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-              // Customer & Payment Banner
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.darkInputBg, borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // Customer & Payment Banner
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: AppColors.darkInputBg, borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('CUSTOMER', style: TextStyle(color: AppColors.darkSubtext, fontSize: 9, fontWeight: FontWeight.bold)),
-                        Text(order.customerName, style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold)),
-                        if (order.customerPhone != null) Text(order.customerPhone!, style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontFamily: 'monospace')),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('PAYMENT', style: TextStyle(color: AppColors.darkSubtext, fontSize: 9, fontWeight: FontWeight.bold)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
-                          child: Text(order.paymentMethod.toUpperCase(), style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('CUSTOMER', style: TextStyle(color: AppColors.darkSubtext, fontSize: 9, fontWeight: FontWeight.bold)),
+                              Text(
+                                order.customerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                              if (order.customerPhone != null)
+                                Text(
+                                  order.customerPhone!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontFamily: 'monospace'),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text('PAYMENT', style: TextStyle(color: AppColors.darkSubtext, fontSize: 9, fontWeight: FontWeight.bold)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                              child: Text(
+                                order.paymentMethod.toUpperCase(),
+                                style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Items Table
-              Text('Items (${order.itemCount})', style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-
-              SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  itemCount: order.items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.darkCardBorder),
-                  itemBuilder: (context, idx) {
-                    final item = order.items[idx];
-                    return ListTile(
-                      dense: true,
-                      title: Text(item.productName, style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold)),
-                      subtitle: Text('${item.quantity} ${item.unit} @ ${Formatters.formatCurrency(item.unitPrice, settings.currencySymbol)}', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10)),
-                      trailing: Text(Formatters.formatCurrency(item.lineTotal, settings.currencySymbol), style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold)),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Financial Totals
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.darkInputBg, borderRadius: BorderRadius.circular(12)),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Subtotal:', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
-                        Text(Formatters.formatCurrency(order.subtotal, settings.currencySymbol), style: const TextStyle(color: AppColors.darkText, fontSize: 11)),
-                      ],
-                    ),
-                    if (order.discountAmount > 0)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Discount (${order.discountType == "percentage" ? "${order.discountValue}%" : "Flat"}):', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
-                          Text('-${Formatters.formatCurrency(order.discountAmount, settings.currencySymbol)}', style: const TextStyle(color: AppColors.primaryLight, fontSize: 11)),
-                        ],
-                      ),
-                    const Divider(color: AppColors.darkCardBorder),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('GRAND TOTAL:', style: TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold)),
-                        Text(Formatters.formatCurrency(order.grandTotal, settings.currencySymbol), style: const TextStyle(color: AppColors.primaryLight, fontSize: 15, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      showDialog(
-                        context: context,
-                        builder: (_) => ReceiptModal(order: order),
-                      );
-                    },
-                    icon: const Icon(LucideIcons.printer, size: 16),
-                    label: const Text('Print Receipt', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close'),
+                  const SizedBox(height: 16),
+
+                  // Items list
+                  Text('Items (${order.itemCount})', style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      itemCount: order.items.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.darkCardBorder),
+                      itemBuilder: (context, idx) {
+                        final item = order.items[idx];
+                        return ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                          title: Text(
+                            item.productName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '${item.quantity} ${item.unit} @ ${Formatters.formatCurrency(item.unitPrice, settings.currencySymbol)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10),
+                          ),
+                          trailing: Text(
+                            Formatters.formatCurrency(item.lineTotal, settings.currencySymbol),
+                            style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Financial Totals
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: AppColors.darkInputBg, borderRadius: BorderRadius.circular(12)),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Subtotal:', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
+                            Text(Formatters.formatCurrency(order.subtotal, settings.currencySymbol), style: const TextStyle(color: AppColors.darkText, fontSize: 11)),
+                          ],
+                        ),
+                        if (order.discountAmount > 0)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Discount (${order.discountType == "percentage" ? "${order.discountValue}%" : "Flat"}):',
+                                style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11),
+                              ),
+                              Text(
+                                '-${Formatters.formatCurrency(order.discountAmount, settings.currencySymbol)}',
+                                style: const TextStyle(color: AppColors.primaryLight, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        const Divider(color: AppColors.darkCardBorder),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('GRAND TOTAL:', style: TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold)),
+                            Text(
+                              Formatters.formatCurrency(order.grandTotal, settings.currencySymbol),
+                              style: const TextStyle(color: AppColors.primaryLight, fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          showDialog(
+                            context: context,
+                            builder: (_) => ReceiptModal(order: order),
+                          );
+                        },
+                        icon: const Icon(LucideIcons.printer, size: 16),
+                        label: const Text('Print Receipt', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -230,13 +317,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header & Tab Switcher
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(color: AppColors.darkCard, borderRadius: BorderRadius.circular(12)),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     ChoiceChip(
                       label: Text('Active Orders (${allOrders.where((o) => !o.isDeleted).length})'),
@@ -267,7 +358,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
               ),
 
-              if (_selectedIds.isNotEmpty) ...[
+              if (_selectedIds.isNotEmpty)
                 if (_activeTab == 'active')
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
@@ -278,7 +369,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           title: 'Archive Selected Orders',
                           message: 'Move ${_selectedIds.length} selected orders to archive?',
                           onConfirm: () {
-                            final res = orderProv.bulkSoftDeleteOrders(_selectedIds);
+                            final res = orderProv.bulkSoftDeleteOrders(List<String>.from(_selectedIds));
                             setState(() => _selectedIds.clear());
                             _showSnackBar('Archived ${res['count']} orders.');
                           },
@@ -299,7 +390,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           message: 'Restore ${_selectedIds.length} selected orders to active list?',
                           variant: ConfirmVariant.info,
                           onConfirm: () {
-                            final res = orderProv.bulkRestoreOrders(_selectedIds);
+                            final res = orderProv.bulkRestoreOrders(List<String>.from(_selectedIds));
                             setState(() => _selectedIds.clear());
                             _showSnackBar('Restored ${res['count']} orders.');
                           },
@@ -309,15 +400,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     icon: const Icon(LucideIcons.rotateCcw, size: 16),
                     label: Text('Restore Selected (${_selectedIds.length})'),
                   ),
-              ],
             ],
           ),
           const SizedBox(height: 16),
 
           // Filters Bar
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
+              SizedBox(
+                width: 320,
                 child: TextField(
                   controller: _searchController,
                   style: const TextStyle(color: AppColors.darkText, fontSize: 13),
@@ -328,8 +422,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-
               DropdownButton<String>(
                 value: _dateFilter,
                 dropdownColor: AppColors.darkCard,
@@ -343,8 +435,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   if (val != null) setState(() => _dateFilter = val);
                 },
               ),
-              const SizedBox(width: 10),
-
               DropdownButton<String>(
                 value: _paymentFilter,
                 dropdownColor: AppColors.darkCard,
@@ -371,126 +461,174 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 border: Border.all(color: AppColors.darkCardBorder),
               ),
               child: filtered.isEmpty
-                  ? const Center(child: Text('No orders found.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)))
-                  : SingleChildScrollView(
-                      child: DataTable(
-                        columnSpacing: 16,
-                        columns: [
-                          DataColumn(
-                            label: Checkbox(
-                              value: filtered.isNotEmpty && filtered.every((o) => _selectedIds.contains(o.id)),
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    _selectedIds.addAll(filtered.map((o) => o.id));
-                                  } else {
-                                    _selectedIds.clear();
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                          const DataColumn(label: Text('Order #', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Date & Time', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Customer', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Items', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Total', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Payment', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          const DataColumn(label: Text('Actions', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                        ],
-                        rows: filtered.map((o) {
-                          final isSelected = _selectedIds.contains(o.id);
-
-                          return DataRow(
-                            selected: isSelected,
-                            onSelectChanged: (val) {
-                              setState(() {
-                                if (val == true) {
-                                  _selectedIds.add(o.id);
-                                } else {
-                                  _selectedIds.remove(o.id);
-                                }
-                              });
-                            },
-                            cells: [
-                              DataCell(
-                                Checkbox(
-                                  value: isSelected,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      if (val == true) {
-                                        _selectedIds.add(o.id);
-                                      } else {
-                                        _selectedIds.remove(o.id);
-                                      }
-                                    });
-                                  },
-                                ),
-                              ),
-                              DataCell(Text(o.orderNumber, style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'))),
-                              DataCell(Text(Formatters.formatDateTime(o.createdAt), style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11))),
-                              DataCell(Text(o.customerName, style: const TextStyle(color: AppColors.darkText, fontSize: 12))),
-                              DataCell(Text('${o.itemCount} items (${o.totalQuantity} qty)', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11))),
-                              DataCell(Text(Formatters.formatCurrency(o.grandTotal, settings.currencySymbol), style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold))),
-                              DataCell(
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                                  child: Text(o.paymentMethod.toUpperCase(), style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                              DataCell(
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(LucideIcons.eye, size: 16, color: AppColors.primaryLight),
-                                      onPressed: () => _showOrderDetailsModal(context, o),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(LucideIcons.printer, size: 16, color: AppColors.primaryLight),
-                                      onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (_) => ReceiptModal(order: o),
-                                        );
-                                      },
-                                    ),
-                                    if (_activeTab == 'active') ...[
-                                      IconButton(
-                                        icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (_) => ConfirmDialog(
-                                              title: 'Archive Order',
-                                              message: 'Archive order ${o.orderNumber}?',
-                                              onConfirm: () => orderProv.softDeleteOrder(o.id),
-                                            ),
-                                          );
+                  ? const Center(
+                      child: Text('No orders found.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                                child: DataTable(
+                                  // We draw our own checkbox column, so turn off
+                                  // the built-in one (it caused a duplicate checkbox
+                                  // and misaligned header).
+                                  showCheckboxColumn: false,
+                                  columnSpacing: 16,
+                                  dataRowMinHeight: 52,
+                                  dataRowMaxHeight: 60,
+                                  dividerThickness: 0.5,
+                                  columns: [
+                                    DataColumn(
+                                      label: Checkbox(
+                                        value: filtered.isNotEmpty && filtered.every((o) => _selectedIds.contains(o.id)),
+                                        onChanged: (val) {
+                                          setState(() {
+                                            if (val == true) {
+                                              for (final o in filtered) {
+                                                if (!_selectedIds.contains(o.id)) _selectedIds.add(o.id);
+                                              }
+                                            } else {
+                                              _selectedIds.clear();
+                                            }
+                                          });
                                         },
                                       ),
-                                    ] else ...[
-                                      IconButton(
-                                        icon: const Icon(LucideIcons.rotateCcw, size: 16, color: AppColors.primaryLight),
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (_) => ConfirmDialog(
-                                              title: 'Restore Order',
-                                              message: 'Restore order ${o.orderNumber} back to active list?',
-                                              variant: ConfirmVariant.info,
-                                              onConfirm: () => orderProv.restoreOrder(o.id),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
+                                    ),
+                                    _col('Order #'),
+                                    _col('Date & Time'),
+                                    _col('Customer'),
+                                    _col('Items'),
+                                    _col('Total'),
+                                    _col('Payment'),
+                                    _col('Actions'),
                                   ],
+                                  rows: filtered.map((o) {
+                                    final isSelected = _selectedIds.contains(o.id);
+
+                                    return DataRow(
+                                      selected: isSelected,
+                                      onSelectChanged: (val) => _toggleSelected(o.id, val == true),
+                                      cells: [
+                                        DataCell(
+                                          Checkbox(
+                                            value: isSelected,
+                                            onChanged: (val) => _toggleSelected(o.id, val == true),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            o.orderNumber,
+                                            style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            Formatters.formatDateTime(o.createdAt),
+                                            style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(maxWidth: 160),
+                                            child: Text(
+                                              o.customerName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(color: AppColors.darkText, fontSize: 12),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            '${o.itemCount} items (${o.totalQuantity} qty)',
+                                            style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            Formatters.formatCurrency(o.grandTotal, settings.currencySymbol),
+                                            style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              o.paymentMethod.toUpperCase(),
+                                              style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              _actionButton(
+                                                LucideIcons.eye,
+                                                AppColors.primaryLight,
+                                                () => _showOrderDetailsModal(context, o),
+                                              ),
+                                              _actionButton(
+                                                LucideIcons.printer,
+                                                AppColors.primaryLight,
+                                                () {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (_) => ReceiptModal(order: o),
+                                                  );
+                                                },
+                                              ),
+                                              if (_activeTab == 'active')
+                                                _actionButton(
+                                                  LucideIcons.trash2,
+                                                  AppColors.danger,
+                                                  () {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (_) => ConfirmDialog(
+                                                        title: 'Archive Order',
+                                                        message: 'Archive order ${o.orderNumber}?',
+                                                        onConfirm: () => orderProv.softDeleteOrder(o.id),
+                                                      ),
+                                                    );
+                                                  },
+                                                )
+                                              else
+                                                _actionButton(
+                                                  LucideIcons.rotateCcw,
+                                                  AppColors.primaryLight,
+                                                  () {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (_) => ConfirmDialog(
+                                                        title: 'Restore Order',
+                                                        message: 'Restore order ${o.orderNumber} back to active list?',
+                                                        variant: ConfirmVariant.info,
+                                                        onConfirm: () => orderProv.restoreOrder(o.id),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
                                 ),
                               ),
-                            ],
+                            ),
                           );
-                        }).toList(),
+                        },
                       ),
                     ),
             ),

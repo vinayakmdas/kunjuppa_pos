@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kunjuppa_pos/widgets/bluetooth_helper.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
@@ -35,7 +36,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    final s = context.read<SettingsProvider>().settings;
+    _fillFromSettings(context.read<SettingsProvider>().settings);
+  }
+
+  void _fillFromSettings(BusinessSettings s) {
     _businessNameController.text = s.businessName;
     _phoneController.text = s.phone;
     _addressController.text = s.address;
@@ -79,7 +83,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       phone: _phoneController.text.trim(),
       address: _addressController.text.trim(),
       email: _emailController.text.trim(),
-      gstin: _gstinController.text.trim().isEmpty ? null : _gstinController.text.trim(),
+      gstin: _gstinController.text.trim().isEmpty
+          ? null
+          : _gstinController.text.trim(),
       currencySymbol: _currencySymbolController.text.trim(),
       currencyCode: _currencyCodeController.text.trim(),
       receiptWidth: _receiptWidth,
@@ -102,21 +108,128 @@ class _SettingsScreenState extends State<SettingsScreen> {
     context.read<OrderProvider>().loadOrders();
 
     final s = context.read<SettingsProvider>().settings;
-    setState(() {
-      _businessNameController.text = s.businessName;
-      _phoneController.text = s.phone;
-      _addressController.text = s.address;
-      _emailController.text = s.email;
-      _gstinController.text = s.gstin ?? '';
-      _currencySymbolController.text = s.currencySymbol;
-      _currencyCodeController.text = s.currencyCode;
-      _receiptFooterController.text = s.receiptFooter;
-      _lowStockController.text = s.lowStockThreshold.toString();
-      _receiptWidth = s.receiptWidth;
-    });
+    setState(() => _fillFromSettings(s));
 
     _showSnackBar('Database reset to initial AED sample catalog.');
   }
+
+  /// Turns Bluetooth on automatically (system prompt on Android),
+  /// then opens the printer pairing dialog.
+  Future<void> _openPrinterModal() async {
+    final ok = await BluetoothHelper.ensureOn();
+    if (!mounted) return;
+    if (!ok) {
+      _showSnackBar('Bluetooth is off or permission denied.', isError: true);
+      return;
+    }
+    showDialog(context: context, builder: (_) => const PrinterConfigModal());
+  }
+
+  // ---------------------------------------------------------------------------
+  // UI helpers
+  // ---------------------------------------------------------------------------
+
+  InputDecoration _inputDeco(String label, IconData icon, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: AppColors.darkSubtext, fontSize: 12),
+      floatingLabelStyle:
+          const TextStyle(color: AppColors.primaryLight, fontSize: 12),
+      hintStyle: TextStyle(
+          color: AppColors.darkSubtext.withOpacity(0.5), fontSize: 12),
+      prefixIcon: Icon(icon, size: 18, color: AppColors.primaryLight),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.04),
+      isDense: true,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.darkCardBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.darkCardBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide:
+            const BorderSide(color: AppColors.primaryLight, width: 1.5),
+      ),
+    );
+  }
+
+  Widget _card({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.darkCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.darkCardBorder),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _sectionTitle(IconData icon, String title, String subtitle) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: AppColors.primaryLight),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.darkText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                    color: AppColors.darkSubtext, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Two fields side by side on wide screens, stacked on narrow phones.
+  Widget _twoCols(Widget a, Widget b) {
+    return LayoutBuilder(builder: (context, c) {
+      if (c.maxWidth < 420) {
+        return Column(children: [a, const SizedBox(height: 14), b]);
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: a),
+          const SizedBox(width: 12),
+          Expanded(child: b),
+        ],
+      );
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -125,224 +238,224 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Center(
-        child: Container(
+        child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 700),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.darkCardBorder),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(LucideIcons.settings, color: AppColors.primaryLight, size: 24),
-                    SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('System & Hardware Configuration', style: TextStyle(color: AppColors.darkText, fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('Store profile, Bluetooth printer layout, and database backups', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
-                      ],
-                    ),
-                  ],
+              // Header
+              _card(
+                child: _sectionTitle(
+                  LucideIcons.settings,
+                  'System & Hardware Configuration',
+                  'Store profile, printer layout and database backups',
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Store Profile Form Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.darkCardBorder),
-                ),
+              // Store profile
+              _card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Retail Store Profile', style: TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-
+                    _sectionTitle(
+                      LucideIcons.store,
+                      'Retail Store Profile',
+                      'Shown on receipts and reports',
+                    ),
+                    const SizedBox(height: 18),
                     TextField(
                       controller: _businessNameController,
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                      decoration: const InputDecoration(labelText: 'Business / Store Name *'),
+                      textCapitalization: TextCapitalization.words,
+                      style: const TextStyle(
+                          color: AppColors.darkText, fontSize: 14),
+                      decoration: _inputDeco(
+                          'Business / Store Name *', LucideIcons.building2),
                     ),
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                            decoration: const InputDecoration(labelText: 'Contact Phone *'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                            decoration: const InputDecoration(labelText: 'Store Email'),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 14),
+                    _twoCols(
+                      TextField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        style: const TextStyle(
+                            color: AppColors.darkText, fontSize: 14),
+                        decoration:
+                            _inputDeco('Contact Phone *', LucideIcons.phone),
+                      ),
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(
+                            color: AppColors.darkText, fontSize: 14),
+                        decoration:
+                            _inputDeco('Store Email', LucideIcons.mail),
+                      ),
                     ),
-                    const SizedBox(height: 12),
-
+                    const SizedBox(height: 14),
                     TextField(
                       controller: _addressController,
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                      decoration: const InputDecoration(labelText: 'Store Address *'),
+                      maxLines: 2,
+                      minLines: 1,
+                      style: const TextStyle(
+                          color: AppColors.darkText, fontSize: 14),
+                      decoration:
+                          _inputDeco('Store Address *', LucideIcons.mapPin),
                     ),
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _gstinController,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontFamily: 'monospace'),
-                            decoration: const InputDecoration(labelText: 'GSTIN / Tax ID'),
-                          ),
+                    const SizedBox(height: 14),
+                    _twoCols(
+                      TextField(
+                        controller: _gstinController,
+                        textCapitalization: TextCapitalization.characters,
+                        style: const TextStyle(
+                          color: AppColors.darkText,
+                          fontSize: 14,
+                          fontFamily: 'monospace',
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _lowStockController,
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
-                            decoration: const InputDecoration(labelText: 'Low Stock Limit *'),
-                          ),
-                        ),
-                      ],
+                        decoration:
+                            _inputDeco('GSTIN / Tax ID', LucideIcons.receipt),
+                      ),
+                      TextField(
+                        controller: _lowStockController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(
+                            color: AppColors.darkText, fontSize: 14),
+                        decoration: _inputDeco(
+                            'Low Stock Limit *', LucideIcons.packageMinus),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Receipt & Hardware Config
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.darkCardBorder),
-                ),
+              // Receipt & hardware
+              _card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Receipt & Hardware Configuration', style: TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold)),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (_) => const PrinterConfigModal(),
-                            );
-                          },
-                          icon: const Icon(LucideIcons.bluetooth, size: 14),
-                          label: const Text('Pair Printer Modal', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
+                    _sectionTitle(
+                      LucideIcons.printer,
+                      'Receipt & Hardware',
+                      'Printer, paper size and footer',
                     ),
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _currencySymbolController,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
-                            decoration: const InputDecoration(labelText: 'Currency Symbol *'),
-                          ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _receiptWidth,
-                            decoration: const InputDecoration(labelText: 'Receipt Roll Width *'),
-                            items: const [
-                              DropdownMenuItem(value: '58mm', child: Text('58 mm (2-inch pocket)')),
-                              DropdownMenuItem(value: '80mm', child: Text('80 mm (3-inch counter)')),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) setState(() => _receiptWidth = val);
-                            },
-                          ),
+                        onPressed: _openPrinterModal,
+                        icon: const Icon(LucideIcons.bluetooth, size: 16),
+                        label: const Text(
+                          'Pair Bluetooth Printer',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold),
                         ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-
+                    const SizedBox(height: 18),
+                    _twoCols(
+                      TextField(
+                        controller: _currencySymbolController,
+                        style: const TextStyle(
+                            color: AppColors.darkText, fontSize: 14),
+                        decoration: _inputDeco(
+                            'Currency Symbol *', LucideIcons.badgeDollarSign),
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: _receiptWidth,
+                        isExpanded: true,
+                        dropdownColor: AppColors.darkCard,
+                        style: const TextStyle(
+                            color: AppColors.darkText, fontSize: 14),
+                        decoration: _inputDeco(
+                            'Receipt Roll Width *', LucideIcons.ruler),
+                        items: const [
+                          DropdownMenuItem(
+                              value: '58mm', child: Text('58 mm (2-inch)')),
+                          DropdownMenuItem(
+                              value: '80mm', child: Text('80 mm (3-inch)')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setState(() => _receiptWidth = val);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     TextField(
                       controller: _receiptFooterController,
                       maxLines: 2,
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                      decoration: const InputDecoration(labelText: 'Receipt Footer Message'),
+                      style: const TextStyle(
+                          color: AppColors.darkText, fontSize: 14),
+                      decoration: _inputDeco(
+                        'Receipt Footer Message',
+                        LucideIcons.messageSquare,
+                        hint: 'Thank you, visit again!',
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Save Button
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
+              // Save
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                   onPressed: _handleSaveSettings,
-                  child: const Text('Save Store Settings', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  icon: const Icon(LucideIcons.save, size: 16),
+                  label: const Text(
+                    'Save Store Settings',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Database & Account Actions
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.darkCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.darkCardBorder),
-                ),
+              // Data & account
+              _card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Data Reset & Account', style: TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    const Text('Reset local database back to the initial sample AED tobacco catalog or sign out.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
-                    const SizedBox(height: 12),
-
-                    Row(
+                    _sectionTitle(
+                      LucideIcons.database,
+                      'Data Reset & Account',
+                      'Reset to sample AED catalog or sign out',
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
                       children: [
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.danger,
                             side: const BorderSide(color: AppColors.danger),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: () {
                             showDialog(
                               context: context,
                               builder: (_) => ConfirmDialog(
                                 title: 'Reset All Data',
-                                message: 'Reset all products, orders, and customers to default seed catalog?',
+                                message:
+                                    'Reset all products, orders, and customers to default seed catalog?',
                                 onConfirm: _handleResetData,
                               ),
                             );
@@ -350,27 +463,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: const Icon(LucideIcons.rotateCcw, size: 14),
                           label: const Text('Reset Sample Data'),
                         ),
-                        const SizedBox(width: 12),
-
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.danger,
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: () {
                             auth.logout();
                             Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const LoginScreen()),
                             );
                           },
                           icon: const Icon(LucideIcons.logOut, size: 14),
-                          label: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: const Text('Sign Out',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

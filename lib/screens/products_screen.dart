@@ -95,197 +95,229 @@ class _ProductsScreenState extends State<ProductsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           return Dialog(
+            insetPadding: const EdgeInsets.all(16),
             backgroundColor: AppColors.darkCard,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Container(
-              width: 500,
-              padding: const EdgeInsets.all(20),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(isEdit ? 'Edit Product' : 'Add New Product', style: const TextStyle(color: AppColors.darkText, fontSize: 16, fontWeight: FontWeight.bold)),
-                        IconButton(icon: const Icon(LucideIcons.x, size: 18, color: AppColors.darkSubtext), onPressed: () => Navigator.of(context).pop()),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextField(
-                      controller: _nameController,
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                      decoration: const InputDecoration(labelText: 'Product Name *'),
-                    ),
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _skuController,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontFamily: 'monospace'),
-                            decoration: const InputDecoration(labelText: 'SKU / Code *'),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              isEdit ? 'Edit Product' : 'Add New Product',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: AppColors.darkText, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _barcodeController,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontFamily: 'monospace'),
-                            decoration: const InputDecoration(labelText: 'Barcode (Optional)'),
+                          IconButton(
+                            icon: const Icon(LucideIcons.x, size: 18, color: AppColors.darkSubtext),
+                            onPressed: () => Navigator.of(context).pop(),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _categoryController,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                            decoration: const InputDecoration(labelText: 'Category *'),
+                      TextField(
+                        controller: _nameController,
+                        style: const TextStyle(color: AppColors.darkText, fontSize: 13),
+                        decoration: const InputDecoration(labelText: 'Product Name *'),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _skuController,
+                              style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontFamily: 'monospace'),
+                              decoration: const InputDecoration(labelText: 'SKU / Code *'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedUnit,
-                            decoration: const InputDecoration(labelText: 'Unit *'),
-                            items: const [
-                              DropdownMenuItem(value: 'piece', child: Text('piece')),
-                              DropdownMenuItem(value: 'packet', child: Text('packet')),
-                              DropdownMenuItem(value: 'box', child: Text('box')),
-                              DropdownMenuItem(value: 'kg', child: Text('kg')),
-                              DropdownMenuItem(value: 'litre', child: Text('litre')),
-                              DropdownMenuItem(value: 'meter', child: Text('meter')),
-                              DropdownMenuItem(value: 'dozen', child: Text('dozen')),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) setModalState(() => _selectedUnit = val);
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _barcodeController,
+                              style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontFamily: 'monospace'),
+                              decoration: const InputDecoration(labelText: 'Barcode (Optional)'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _categoryController,
+                              style: const TextStyle(color: AppColors.darkText, fontSize: 13),
+                              decoration: const InputDecoration(labelText: 'Category *'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              value: _selectedUnit,
+                              decoration: const InputDecoration(labelText: 'Unit *'),
+                              items: const [
+                                DropdownMenuItem(value: 'piece', child: Text('piece')),
+                                DropdownMenuItem(value: 'packet', child: Text('packet')),
+                                DropdownMenuItem(value: 'box', child: Text('box')),
+                                DropdownMenuItem(value: 'kg', child: Text('kg')),
+                                DropdownMenuItem(value: 'litre', child: Text('litre')),
+                                DropdownMenuItem(value: 'meter', child: Text('meter')),
+                                DropdownMenuItem(value: 'dozen', child: Text('dozen')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) setModalState(() => _selectedUnit = val);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _sellingPriceController,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
+                              decoration: const InputDecoration(labelText: 'Selling Price *'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _costPriceController,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(color: AppColors.darkText, fontSize: 13),
+                              decoration: const InputDecoration(labelText: 'Cost Price'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      TextField(
+                        controller: _stockController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
+                        decoration: const InputDecoration(labelText: 'Current Stock Quantity *'),
+                      ),
+                      const SizedBox(height: 12),
+
+                      TextField(
+                        controller: _descriptionController,
+                        maxLines: 2,
+                        style: const TextStyle(color: AppColors.darkText, fontSize: 13),
+                        decoration: const InputDecoration(labelText: 'Description (Optional)'),
+                      ),
+                      const SizedBox(height: 20),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                            onPressed: () {
+                              final name = _nameController.text;
+                              final sku = _skuController.text;
+                              final barcode = _barcodeController.text;
+                              final category = _categoryController.text;
+                              final sellP = double.tryParse(_sellingPriceController.text) ?? -1;
+                              final costP = double.tryParse(_costPriceController.text);
+                              final stock = int.tryParse(_stockController.text) ?? -1;
+                              final desc = _descriptionController.text;
+
+                              final productProv = context.read<ProductProvider>();
+
+                              if (isEdit && _editingProduct != null) {
+                                final res = productProv.updateProduct(_editingProduct!.id, {
+                                  'name': name,
+                                  'sku': sku,
+                                  'barcode': barcode,
+                                  'category': category,
+                                  'sellingPrice': sellP,
+                                  'costPrice': costP,
+                                  'stockQuantity': stock,
+                                  'unit': _selectedUnit,
+                                  'description': desc,
+                                });
+
+                                if (res['success'] == true) {
+                                  _showSnackBar('Product updated!');
+                                  Navigator.of(context).pop();
+                                } else {
+                                  _showSnackBar(res['error'] ?? 'Error updating product', isError: true);
+                                }
+                              } else {
+                                final res = productProv.addProduct(
+                                  name: name,
+                                  sku: sku,
+                                  barcode: barcode,
+                                  category: category,
+                                  sellingPrice: sellP,
+                                  costPrice: costP,
+                                  stockQuantity: stock,
+                                  unit: _selectedUnit,
+                                  description: desc,
+                                );
+
+                                if (res['success'] == true) {
+                                  _showSnackBar('Product added!');
+                                  Navigator.of(context).pop();
+                                } else {
+                                  _showSnackBar(res['error'] ?? 'Error adding product', isError: true);
+                                }
+                              }
                             },
+                            child: Text(
+                              isEdit ? 'Save Changes' : 'Create Product',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _sellingPriceController,
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
-                            decoration: const InputDecoration(labelText: 'Selling Price *'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _costPriceController,
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                            decoration: const InputDecoration(labelText: 'Cost Price'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: _stockController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
-                      decoration: const InputDecoration(labelText: 'Current Stock Quantity *'),
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: _descriptionController,
-                      maxLines: 2,
-                      style: const TextStyle(color: AppColors.darkText, fontSize: 13),
-                      decoration: const InputDecoration(labelText: 'Description (Optional)'),
-                    ),
-                    const SizedBox(height: 20),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 10),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                          onPressed: () {
-                            final name = _nameController.text;
-                            final sku = _skuController.text;
-                            final barcode = _barcodeController.text;
-                            final category = _categoryController.text;
-                            final sellP = double.tryParse(_sellingPriceController.text) ?? -1;
-                            final costP = double.tryParse(_costPriceController.text);
-                            final stock = int.tryParse(_stockController.text) ?? -1;
-                            final desc = _descriptionController.text;
-
-                            final productProv = context.read<ProductProvider>();
-
-                            if (isEdit && _editingProduct != null) {
-                              final res = productProv.updateProduct(_editingProduct!.id, {
-                                'name': name,
-                                'sku': sku,
-                                'barcode': barcode,
-                                'category': category,
-                                'sellingPrice': sellP,
-                                'costPrice': costP,
-                                'stockQuantity': stock,
-                                'unit': _selectedUnit,
-                                'description': desc,
-                              });
-
-                              if (res['success'] == true) {
-                                _showSnackBar('Product updated!');
-                                Navigator.of(context).pop();
-                              } else {
-                                _showSnackBar(res['error'] ?? 'Error updating product', isError: true);
-                              }
-                            } else {
-                              final res = productProv.addProduct(
-                                name: name,
-                                sku: sku,
-                                barcode: barcode,
-                                category: category,
-                                sellingPrice: sellP,
-                                costPrice: costP,
-                                stockQuantity: stock,
-                                unit: _selectedUnit,
-                                description: desc,
-                              );
-
-                              if (res['success'] == true) {
-                                _showSnackBar('Product added!');
-                                Navigator.of(context).pop();
-                              } else {
-                                _showSnackBar(res['error'] ?? 'Error adding product', isError: true);
-                              }
-                            }
-                          },
-                          child: Text(isEdit ? 'Save Changes' : 'Create Product', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  DataColumn _col(String label) => DataColumn(
+        label: Text(
+          label,
+          style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold),
+        ),
+      );
+
+  Widget _actionButton(IconData icon, Color color, VoidCallback onPressed) {
+    return IconButton(
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      icon: Icon(icon, size: 16, color: color),
+      onPressed: onPressed,
     );
   }
 
@@ -296,6 +328,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
     final allProducts = productProv.products;
     final categories = ['All', ...allProducts.map((p) => p.category).toSet()];
+
+    // Safety: if the selected category no longer exists, reset it
+    // (prevents a DropdownButton assertion error).
+    if (!categories.contains(_categoryFilter)) {
+      _categoryFilter = 'All';
+    }
 
     final filtered = allProducts.where((p) {
       if (_activeTab == 'active' && p.isDeleted) return false;
@@ -323,13 +361,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Top Header & Tab switcher
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 10,
+            spacing: 10,
             children: [
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(color: AppColors.darkCard, borderRadius: BorderRadius.circular(12)),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     ChoiceChip(
                       label: Text('Active (${allProducts.where((p) => !p.isDeleted).length})'),
@@ -374,14 +416,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-
-              DropdownButton<String>(
-                value: _categoryFilter,
-                dropdownColor: AppColors.darkCard,
-                items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c == 'All' ? 'All Categories' : c, style: const TextStyle(fontSize: 12, color: AppColors.darkText)))).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _categoryFilter = val);
-                },
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 180),
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: _categoryFilter,
+                  dropdownColor: AppColors.darkCard,
+                  items: categories
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(
+                            c == 'All' ? 'All Categories' : c,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, color: AppColors.darkText),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _categoryFilter = val);
+                  },
+                ),
               ),
             ],
           ),
@@ -396,98 +452,156 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 border: Border.all(color: AppColors.darkCardBorder),
               ),
               child: filtered.isEmpty
-                  ? const Center(child: Text('No products found.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)))
-                  : SingleChildScrollView(
-                      child: DataTable(
-                        columnSpacing: 16,
-                        columns: const [
-                          DataColumn(label: Text('Product Name', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('SKU', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Category', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Price', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Stock', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Actions', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                        ],
-                        rows: filtered.map((p) {
-                          final isOut = p.stockQuantity <= 0;
-                          final isLow = p.stockQuantity > 0 && p.stockQuantity <= settings.lowStockThreshold;
+                  ? const Center(
+                      child: Text('No products found.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                                child: DataTable(
+                                  columnSpacing: 16,
+                                  dataRowMinHeight: 52,
+                                  dataRowMaxHeight: 60,
+                                  dividerThickness: 0.5,
+                                  columns: [
+                                    _col('Product Name'),
+                                    _col('SKU'),
+                                    _col('Category'),
+                                    _col('Price'),
+                                    _col('Stock'),
+                                    _col('Actions'),
+                                  ],
+                                  rows: filtered.map((p) {
+                                    final isOut = p.stockQuantity <= 0;
+                                    final isLow = p.stockQuantity > 0 && p.stockQuantity <= settings.lowStockThreshold;
 
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(p.name, style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold)),
-                                    if (p.barcode != null && p.barcode!.isNotEmpty)
-                                      Text('BC: ${p.barcode}', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 9, fontFamily: 'monospace')),
-                                  ],
-                                ),
-                              ),
-                              DataCell(Text(p.sku, style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontFamily: 'monospace'))),
-                              DataCell(Text(p.category, style: const TextStyle(color: AppColors.darkText, fontSize: 11))),
-                              DataCell(Text(Formatters.formatCurrency(p.sellingPrice, settings.currencySymbol), style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold))),
-                              DataCell(
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isOut ? AppColors.danger.withValues(alpha: 0.2) : isLow ? AppColors.warning.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    '${p.stockQuantity} ${p.unit}',
-                                    style: TextStyle(
-                                      color: isOut ? Colors.redAccent : isLow ? AppColors.warning : AppColors.primaryLight,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Row(
-                                  children: [
-                                    if (_activeTab == 'active') ...[
-                                      IconButton(
-                                        icon: const Icon(LucideIcons.edit2, size: 16, color: AppColors.info),
-                                        onPressed: () => _openEditProductModal(context, p),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.danger),
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (_) => ConfirmDialog(
-                                              title: 'Archive Product',
-                                              message: 'Are you sure you want to archive "${p.name}"? It will be hidden from the active POS counter.',
-                                              onConfirm: () => productProv.softDeleteProduct(p.id),
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(maxWidth: 220),
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  p.name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold),
+                                                ),
+                                                if (p.barcode != null && p.barcode!.isNotEmpty)
+                                                  Text(
+                                                    'BC: ${p.barcode}',
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: const TextStyle(color: AppColors.darkSubtext, fontSize: 9, fontFamily: 'monospace'),
+                                                  ),
+                                              ],
                                             ),
-                                          );
-                                        },
-                                      ),
-                                    ] else ...[
-                                      IconButton(
-                                        icon: const Icon(LucideIcons.rotateCcw, size: 16, color: AppColors.primaryLight),
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (_) => ConfirmDialog(
-                                              title: 'Restore Product',
-                                              message: 'Restore "${p.name}" back to active catalog?',
-                                              variant: ConfirmVariant.info,
-                                              onConfirm: () => productProv.restoreProduct(p.id),
+                                          ),
+                                        ),
+                                        DataCell(Text(p.sku, style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontFamily: 'monospace'))),
+                                        DataCell(
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(maxWidth: 140),
+                                            child: Text(
+                                              p.category,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(color: AppColors.darkText, fontSize: 11),
                                             ),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ],
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            Formatters.formatCurrency(p.sellingPrice, settings.currencySymbol),
+                                            style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: isOut
+                                                  ? AppColors.danger.withValues(alpha: 0.2)
+                                                  : isLow
+                                                      ? AppColors.warning.withValues(alpha: 0.2)
+                                                      : AppColors.primary.withValues(alpha: 0.2),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              '${p.stockQuantity} ${p.unit}',
+                                              style: TextStyle(
+                                                color: isOut
+                                                    ? Colors.redAccent
+                                                    : isLow
+                                                        ? AppColors.warning
+                                                        : AppColors.primaryLight,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (_activeTab == 'active') ...[
+                                                _actionButton(
+                                                  LucideIcons.edit2,
+                                                  AppColors.info,
+                                                  () => _openEditProductModal(context, p),
+                                                ),
+                                                _actionButton(
+                                                  LucideIcons.trash2,
+                                                  AppColors.danger,
+                                                  () {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (_) => ConfirmDialog(
+                                                        title: 'Archive Product',
+                                                        message: 'Are you sure you want to archive "${p.name}"? It will be hidden from the active POS counter.',
+                                                        onConfirm: () => productProv.softDeleteProduct(p.id),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ] else ...[
+                                                _actionButton(
+                                                  LucideIcons.rotateCcw,
+                                                  AppColors.primaryLight,
+                                                  () {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (_) => ConfirmDialog(
+                                                        title: 'Restore Product',
+                                                        message: 'Restore "${p.name}" back to active catalog?',
+                                                        variant: ConfirmVariant.info,
+                                                        onConfirm: () => productProv.restoreProduct(p.id),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
                                 ),
                               ),
-                            ],
+                            ),
                           );
-                        }).toList(),
+                        },
                       ),
                     ),
             ),

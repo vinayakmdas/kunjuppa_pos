@@ -41,6 +41,7 @@ dependencies:
   blue_thermal_printer: ^1.2.3
   flutter_lucide: ^1.51.0
   lucide_icons_flutter: ^3.1.21
+  flutter_blue_plus: ^2.3.14
 dev_dependencies:
   flutter_test:
     sdk: flutter
