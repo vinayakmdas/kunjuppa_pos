@@ -26,6 +26,9 @@ class MainShellScreen extends StatefulWidget {
 class MainShellScreenState extends State<MainShellScreen> {
   late int _currentIndex;
 
+  // GlobalKey to control the Scaffold drawer programmatically
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   void navigateToIndex(int index) {
     setState(() {
       _currentIndex = index;
@@ -70,8 +73,16 @@ class MainShellScreenState extends State<MainShellScreen> {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppColors.darkBg,
       appBar: AppBar(
+        // On mobile, show a hamburger button that opens the drawer
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(LucideIcons.menu, color: AppColors.darkText, size: 22),
+                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+              ),
         title: Text(_titles[_currentIndex]),
         actions: [
           // Bluetooth Hardware Modal Shortcut Button
@@ -98,6 +109,7 @@ class MainShellScreenState extends State<MainShellScreen> {
                 ),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     LucideIcons.bluetooth,
@@ -125,74 +137,86 @@ class MainShellScreenState extends State<MainShellScreen> {
           ),
         ],
       ),
+      // Drawer is always provided; on desktop it won't be triggered unless we call openDrawer()
       drawer: Drawer(
         backgroundColor: AppColors.darkCard,
-        child: Column(
-          children: [
-            // Drawer Header
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                color: AppColors.darkCard,
-                border: Border(bottom: BorderSide(color: AppColors.darkCardBorder)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(12),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Drawer Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                decoration: const BoxDecoration(
+                  color: AppColors.darkCard,
+                  border: Border(bottom: BorderSide(color: AppColors.darkCardBorder)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(LucideIcons.store, color: Colors.white, size: 24),
                     ),
-                    child: const Icon(LucideIcons.store, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          settings.businessName,
-                          style: const TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          auth.user?.name ?? 'Admin',
-                          style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11),
-                        ),
-                      ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            settings.businessName,
+                            style: const TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            auth.user?.name ?? 'Admin',
+                            style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Navigation Items
-            _buildDrawerTile(0, 'Dashboard', LucideIcons.layoutDashboard),
-            _buildDrawerTile(1, 'POS Sales Counter', LucideIcons.shoppingCart),
-            _buildDrawerTile(2, 'Products Catalog', LucideIcons.package),
-            _buildDrawerTile(3, 'Customer Directory', LucideIcons.users),
-            _buildDrawerTile(4, 'Order History', LucideIcons.receipt),
-            _buildDrawerTile(5, 'Settings & Hardware', LucideIcons.settings),
+              // Navigation Items
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  children: [
+                    _buildDrawerTile(0, 'Dashboard', LucideIcons.layoutDashboard),
+                    _buildDrawerTile(1, 'POS Sales Counter', LucideIcons.shoppingCart),
+                    _buildDrawerTile(2, 'Products Catalog', LucideIcons.package),
+                    _buildDrawerTile(3, 'Customer Directory', LucideIcons.users),
+                    _buildDrawerTile(4, 'Order History', LucideIcons.receipt),
+                    _buildDrawerTile(5, 'Settings & Hardware', LucideIcons.settings),
+                  ],
+                ),
+              ),
 
-            const Spacer(),
-            const Divider(color: AppColors.darkCardBorder),
+              const Divider(color: AppColors.darkCardBorder, height: 1),
 
-            // Logout
-            ListTile(
-              leading: const Icon(LucideIcons.logOut, color: AppColors.danger, size: 20),
-              title: const Text('Logout', style: TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.bold)),
-              onTap: () {
-                auth.logout();
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+              // Logout
+              ListTile(
+                leading: const Icon(LucideIcons.logOut, color: AppColors.danger, size: 20),
+                title: const Text('Logout', style: TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.bold)),
+                onTap: () {
+                  // Close drawer first, then logout
+                  Navigator.of(context).pop();
+                  auth.logout();
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
       body: Row(
@@ -243,14 +267,14 @@ class MainShellScreenState extends State<MainShellScreen> {
                   // Menu
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                       children: [
-                        _buildDrawerTile(0, 'Dashboard', LucideIcons.layoutDashboard),
-                        _buildDrawerTile(1, 'POS Counter', LucideIcons.shoppingCart),
-                        _buildDrawerTile(2, 'Products', LucideIcons.package),
-                        _buildDrawerTile(3, 'Customers', LucideIcons.users),
-                        _buildDrawerTile(4, 'Orders', LucideIcons.receipt),
-                        _buildDrawerTile(5, 'Settings', LucideIcons.settings),
+                        _buildDesktopSidebarTile(0, 'Dashboard', LucideIcons.layoutDashboard),
+                        _buildDesktopSidebarTile(1, 'POS Counter', LucideIcons.shoppingCart),
+                        _buildDesktopSidebarTile(2, 'Products', LucideIcons.package),
+                        _buildDesktopSidebarTile(3, 'Customers', LucideIcons.users),
+                        _buildDesktopSidebarTile(4, 'Orders', LucideIcons.receipt),
+                        _buildDesktopSidebarTile(5, 'Settings', LucideIcons.settings),
                       ],
                     ),
                   ),
@@ -306,6 +330,7 @@ class MainShellScreenState extends State<MainShellScreen> {
     );
   }
 
+  /// Drawer tile – used inside the Drawer widget (safe to use Navigator.pop for drawer close)
   Widget _buildDrawerTile(int index, String title, IconData icon) {
     final isSelected = _currentIndex == index;
     return ListTile(
@@ -324,10 +349,30 @@ class MainShellScreenState extends State<MainShellScreen> {
       ),
       onTap: () {
         _navigateToIndex(index);
-        if (Scaffold.of(context).isDrawerOpen) {
-          Navigator.of(context).pop();
-        }
+        // Pop the drawer route
+        Navigator.of(context).pop();
       },
+    );
+  }
+
+  /// Desktop sidebar tile – NOT inside a Drawer, so no Navigator.pop for drawer close
+  Widget _buildDesktopSidebarTile(int index, String title, IconData icon) {
+    final isSelected = _currentIndex == index;
+    return ListTile(
+      dense: true,
+      selected: isSelected,
+      selectedTileColor: AppColors.primary.withValues(alpha: 0.15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      leading: Icon(icon, color: isSelected ? AppColors.primaryLight : AppColors.darkSubtext, size: 18),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isSelected ? AppColors.primaryLight : AppColors.darkText,
+          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      onTap: () => _navigateToIndex(index),
     );
   }
 }

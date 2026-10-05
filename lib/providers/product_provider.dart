@@ -162,7 +162,7 @@ class ProductProvider extends ChangeNotifier {
       final p = _products[i];
       final matched = items.firstWhere(
         (item) => item['productId'] == p.id,
-        orElse: () => {},
+        orElse: () => <String, dynamic>{},
       );
       if (matched.isNotEmpty) {
         final int qty = matched['quantity'] as int;

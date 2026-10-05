@@ -203,72 +203,121 @@ class _PosScreenState extends State<PosScreen> {
                                     mainAxisSpacing: 10,
                                   ),
                                   itemCount: filteredProducts.length,
-                                  itemBuilder: (context, idx) {
+                                   itemBuilder: (context, idx) {
                                     final product = filteredProducts[idx];
                                     final isOut = product.stockQuantity <= 0;
+                                    // Check if this product is already in the cart
+                                    final cartItem = cartProv.items
+                                        .where((i) => i.productId == product.id)
+                                        .firstOrNull;
+                                    final inCart = cartItem != null;
+                                    final cartQty = cartItem?.quantity ?? 0;
 
                                     return InkWell(
-                                      onTap: () {
-                                        final res = cartProv.addItem(product, 1);
-                                        if (res['success'] != true && res['message'] != null) {
-                                          _showSnackBar(res['message'], isError: true);
-                                        }
-                                      },
+                                      onTap: isOut
+                                          ? () => _showSnackBar('"${product.name}" is out of stock.', isError: true)
+                                          : () {
+                                              final res = cartProv.addItem(product, 1);
+                                              if (res['success'] != true && res['message'] != null) {
+                                                _showSnackBar(res['message'], isError: true);
+                                              }
+                                              // DO NOT auto-navigate to cart tab;
+                                              // user stays on catalog to keep adding items.
+                                            },
                                       borderRadius: BorderRadius.circular(14),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.darkCard,
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(color: AppColors.darkCardBorder),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  product.name,
-                                                  style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold),
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'SKU: ${product.sku}',
-                                                  style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontFamily: 'monospace'),
-                                                ),
-                                              ],
+                                      child: Stack(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: inCart
+                                                  ? AppColors.primary.withValues(alpha: 0.08)
+                                                  : AppColors.darkCard,
+                                              borderRadius: BorderRadius.circular(14),
+                                              border: Border.all(
+                                                color: inCart
+                                                    ? AppColors.primaryLight
+                                                    : AppColors.darkCardBorder,
+                                                width: inCart ? 1.5 : 1.0,
+                                              ),
                                             ),
-                                            Column(
+                                            child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
-                                                Text(
-                                                  Formatters.formatCurrency(product.sellingPrice, settings.currencySymbol),
-                                                  style: const TextStyle(color: AppColors.primaryLight, fontSize: 14, fontWeight: FontWeight.bold),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: isOut ? AppColors.danger.withValues(alpha: 0.2) : AppColors.darkInputBg,
-                                                    borderRadius: BorderRadius.circular(6),
-                                                  ),
-                                                  child: Text(
-                                                    isOut ? 'Out of stock' : '${product.stockQuantity} ${product.unit}',
-                                                    style: TextStyle(
-                                                      color: isOut ? Colors.redAccent : AppColors.darkSubtext,
-                                                      fontSize: 9,
-                                                      fontWeight: FontWeight.bold,
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      product.name,
+                                                      style: TextStyle(
+                                                        color: inCart ? AppColors.primaryLight : AppColors.darkText,
+                                                        fontSize: 13,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
                                                     ),
-                                                  ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      'SKU: ${product.sku}',
+                                                      style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontFamily: 'monospace'),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      Formatters.formatCurrency(product.sellingPrice, settings.currencySymbol),
+                                                      style: const TextStyle(color: AppColors.primaryLight, fontSize: 14, fontWeight: FontWeight.bold),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: isOut ? AppColors.danger.withValues(alpha: 0.2) : AppColors.darkInputBg,
+                                                        borderRadius: BorderRadius.circular(6),
+                                                      ),
+                                                      child: Text(
+                                                        isOut ? 'Out of stock' : '${product.stockQuantity} ${product.unit}',
+                                                        style: TextStyle(
+                                                          color: isOut ? Colors.redAccent : AppColors.darkSubtext,
+                                                          fontSize: 9,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                          // Quantity badge shown when item is in cart
+                                          if (inCart)
+                                            Positioned(
+                                              top: 6,
+                                              right: 6,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  boxShadow: const [
+                                                    BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2)),
+                                                  ],
+                                                ),
+                                                child: Text(
+                                                  '$cartQty',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     );
                                   },
