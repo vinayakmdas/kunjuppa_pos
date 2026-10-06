@@ -157,15 +157,28 @@ class ProductProvider extends ChangeNotifier {
   }
 
   bool reduceStock(List<Map<String, dynamic>> items) {
+    if (items.isEmpty) return true;
+
+    // Create a lookup map of productId -> total quantity sold
+    final Map<String, int> qtyMap = {};
+    for (final item in items) {
+      final pid = item['productId']?.toString();
+      final dynamic rawQty = item['quantity'];
+      final int qty = (rawQty is int)
+          ? rawQty
+          : (int.tryParse(rawQty?.toString() ?? '') ?? 0);
+      if (pid != null && pid.isNotEmpty && qty > 0) {
+        qtyMap[pid] = (qtyMap[pid] ?? 0) + qty;
+      }
+    }
+
+    if (qtyMap.isEmpty) return true;
+
     bool updatedAny = false;
     for (int i = 0; i < _products.length; i++) {
       final p = _products[i];
-      final matched = items.firstWhere(
-        (item) => item['productId'] == p.id,
-        orElse: () => <String, dynamic>{},
-      );
-      if (matched.isNotEmpty) {
-        final int qty = matched['quantity'] as int;
+      final int? qty = qtyMap[p.id];
+      if (qty != null && qty > 0) {
         final newQty = max(0, p.stockQuantity - qty);
         _products[i] = p.copyWith(
           stockQuantity: newQty,

@@ -30,6 +30,8 @@ class CartProvider extends ChangeNotifier {
   double _discountValue = 0.0;
   String _paymentMethod = 'cash'; // 'cash' | 'upi' | 'card'
   List<PendingOrder> _pendingOrders = [];
+  String? _editingPendingOrderId;
+  PendingOrder? _editingPendingOrder;
 
   List<CartItem> get items => _items;
   Customer? get selectedCustomer => _selectedCustomer;
@@ -38,6 +40,9 @@ class CartProvider extends ChangeNotifier {
   double get discountValue => _discountValue;
   String get paymentMethod => _paymentMethod;
   List<PendingOrder> get pendingOrders => _pendingOrders;
+  String? get editingPendingOrderId => _editingPendingOrderId;
+  PendingOrder? get editingPendingOrder => _editingPendingOrder;
+  bool get isEditingPendingOrder => _editingPendingOrderId != null;
 
   CartProvider() {
     loadPendingOrders();
@@ -167,6 +172,8 @@ class CartProvider extends ChangeNotifier {
     _selectedCustomer = null;
     _isWalkIn = true;
     _paymentMethod = 'cash';
+    _editingPendingOrderId = null;
+    _editingPendingOrder = null;
     notifyListeners();
   }
 
@@ -257,7 +264,76 @@ class CartProvider extends ChangeNotifier {
     return {'success': true, 'pendingOrder': pendingOrder};
   }
 
+  /// Start editing a held bill in the active cart session
+  void startEditingPendingOrder(PendingOrder pending) {
+    _editingPendingOrderId = pending.id;
+    _editingPendingOrder = pending;
+    _items = List.from(pending.items);
+    _selectedCustomer = pending.customerSnapshot;
+    _isWalkIn = pending.customerId == null;
+    _discountType = pending.discountType;
+    _discountValue = pending.discountValue;
+    _paymentMethod = pending.paymentMethod;
+    notifyListeners();
+  }
+
+  /// Cancel editing the current held bill without saving changes
+  void cancelEditingPendingOrder() {
+    clearCart();
+  }
+
+  /// Save changes back to the existing held bill in the queue
+  Map<String, dynamic> saveUpdatedHeldBill() {
+    if (_editingPendingOrderId == null) {
+      return {'success': false, 'message': 'No held bill is currently being edited.'};
+    }
+    if (_items.isEmpty) {
+      return {'success': false, 'message': 'Cannot save an empty bill.'};
+    }
+
+    final index = _pendingOrders.indexWhere((p) => p.id == _editingPendingOrderId);
+    if (index == -1) {
+      return {'success': false, 'message': 'Held bill not found in queue.'};
+    }
+
+    final existing = _pendingOrders[index];
+    final totals = getTotals();
+    final custName = _isWalkIn || _selectedCustomer == null ? 'Walk-in Customer' : _selectedCustomer!.name;
+
+    String label = existing.label;
+    if (label.startsWith('Bill #${existing.queueNumber}')) {
+      label = 'Bill #${existing.queueNumber} ($custName)';
+    }
+
+    final updated = existing.copyWith(
+      label: label,
+      customerId: _selectedCustomer?.id,
+      customerName: custName,
+      customerPhone: _selectedCustomer?.phone,
+      customerSnapshot: _selectedCustomer,
+      items: List.from(_items),
+      itemCount: totals.itemCount,
+      totalQuantity: totals.totalQuantity,
+      subtotal: totals.subtotal,
+      discountType: _discountType,
+      discountValue: _discountValue,
+      discountAmount: totals.discountAmount,
+      grandTotal: totals.grandTotal,
+      paymentMethod: _paymentMethod,
+    );
+
+    _pendingOrders[index] = updated;
+    StorageService.savePendingOrders(_pendingOrders);
+
+    clearCart();
+    return {'success': true, 'pendingOrder': updated};
+  }
+
   void removePendingOrder(String id) {
+    if (_editingPendingOrderId == id) {
+      _editingPendingOrderId = null;
+      _editingPendingOrder = null;
+    }
     _pendingOrders.removeWhere((p) => p.id == id);
     StorageService.savePendingOrders(_pendingOrders);
     notifyListeners();
@@ -295,6 +371,8 @@ class CartProvider extends ChangeNotifier {
 
   void clearAllPendingOrders() {
     _pendingOrders = [];
+    _editingPendingOrderId = null;
+    _editingPendingOrder = null;
     StorageService.savePendingOrders([]);
     notifyListeners();
   }

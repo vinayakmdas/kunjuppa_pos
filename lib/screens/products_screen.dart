@@ -35,7 +35,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Product? _editingProduct;
 
-  static const _units = ['piece', 'packet', 'box', 'kg', 'litre', 'meter', 'dozen'];
+  static const _units = ['piece', 'packet', 'box', 'dozen'];
 
   @override
   void dispose() {
@@ -147,7 +147,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     _costPriceController.text = p.costPrice != null ? p.costPrice.toString() : '';
     _stockController.text = p.stockQuantity.toString();
     _descriptionController.text = p.description ?? '';
-    _selectedUnit = p.unit;
+    _selectedUnit = _units.contains(p.unit) ? p.unit : _units.first;
 
     _showFormModal(context, isEdit: true);
   }

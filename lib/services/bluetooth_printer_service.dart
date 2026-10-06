@@ -251,7 +251,7 @@ class BluetoothPrinterService {
       final String unit = item.unit;
       final double lineTotal = item.lineTotal;
 
-      final String totalStr = 'Rs.${lineTotal.toStringAsFixed(2)}';
+      final String totalStr = '${settings.currencySymbol} ${lineTotal.toStringAsFixed(2)}';
       final String qtyStr = '$qty $unit';
 
       if (is58mm) {
@@ -264,7 +264,7 @@ class BluetoothPrinterService {
             ? '${itemName.substring(0, 20)}..'
             : itemName.padRight(22);
         final String qPart = qtyStr.padRight(8);
-        final String pPart = 'Rs.${unitPrice.toStringAsFixed(0)}'.padRight(9);
+        final String pPart = '${settings.currencySymbol} ${unitPrice.toStringAsFixed(0)}'.padRight(9);
         final String line = '$namePart $qPart $pPart ${totalStr.padLeft(7)}';
         bytes.addAll(utf8.encode('$line\n'));
       }
@@ -280,15 +280,15 @@ class BluetoothPrinterService {
     final int itemCount = order.itemCount;
     final int totalQuantity = order.totalQuantity;
 
-    bytes.addAll(utf8.encode('${padBetween("Subtotal:", "Rs.${subtotal.toStringAsFixed(2)}", width)}\n'));
+    bytes.addAll(utf8.encode('${padBetween("Subtotal:", "${settings.currencySymbol} ${subtotal.toStringAsFixed(2)}", width)}\n'));
     if (discountAmount > 0) {
       final String discLabel = 'Discount (${discountType == "percentage" ? "${discountValue.toStringAsFixed(0)}%" : "Flat"}):';
-      bytes.addAll(utf8.encode('${padBetween(discLabel, "-Rs.${discountAmount.toStringAsFixed(2)}", width)}\n'));
+      bytes.addAll(utf8.encode('${padBetween(discLabel, "-${settings.currencySymbol} ${discountAmount.toStringAsFixed(2)}", width)}\n'));
     }
 
     bytes.addAll(utf8.encode('$doubleDivider\n'));
     bytes.addAll([0x1B, 0x45, 0x01]); // Bold
-    bytes.addAll(utf8.encode('${padBetween("TOTAL AMOUNT:", "Rs.${grandTotal.toStringAsFixed(2)}", width)}\n'));
+    bytes.addAll(utf8.encode('${padBetween("TOTAL AMOUNT:", "${settings.currencySymbol} ${grandTotal.toStringAsFixed(2)}", width)}\n'));
     bytes.addAll([0x1B, 0x45, 0x00]); // Bold Off
     bytes.addAll(utf8.encode('$doubleDivider\n'));
     bytes.addAll(utf8.encode('${padBetween("Items: $itemCount", "Total Qty: $totalQuantity", width)}\n'));

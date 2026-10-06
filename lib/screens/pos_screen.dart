@@ -444,6 +444,20 @@ class _PosScreenState extends State<PosScreen> {
                                     ),
                                   ),
                                 ),
+                                if (isDesktop) ...[
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.warning,
+                                      side: const BorderSide(color: AppColors.warning),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () => _openHeldBillsDialog(context, cartProv, productProv, orderProv, settings),
+                                    icon: const Icon(LucideIcons.clock, size: 14),
+                                    label: Text('Held (${cartProv.pendingOrders.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
                                 if (cartProv.items.isNotEmpty) ...[
                                   const SizedBox(width: 8),
                                   IconButton(
@@ -464,6 +478,55 @@ class _PosScreenState extends State<PosScreen> {
                               ],
                             ),
                           ),
+
+                          // Editing Held Bill Banner
+                          if (cartProv.isEditingPendingOrder)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withValues(alpha: 0.15),
+                                border: const Border(bottom: BorderSide(color: AppColors.warning)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(LucideIcons.edit3, size: 14, color: AppColors.warning),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Editing: ${cartProv.editingPendingOrder?.label ?? "Held Bill"}',
+                                          style: const TextStyle(
+                                            color: AppColors.warning,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const Text(
+                                          'Make changes and click Update to save',
+                                          style: TextStyle(color: AppColors.darkSubtext, fontSize: 10),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed: () {
+                                      cartProv.cancelEditingPendingOrder();
+                                      _showSnackBar('Editing cancelled.');
+                                    },
+                                    child: const Text('Cancel', style: TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
 
                           // Cart Items List
                           Expanded(
@@ -525,16 +588,12 @@ class _PosScreenState extends State<PosScreen> {
                                                     children: [
                                                       Text(
                                                         Formatters.formatCurrency(item.unitPrice, settings.currencySymbol),
-                                                        style: TextStyle(
-                                                          color: item.isCustomPrice ? AppColors.primaryLight : AppColors.darkText,
+                                                        style: const TextStyle(
+                                                          color: AppColors.darkText,
                                                           fontSize: 12,
                                                           fontWeight: FontWeight.bold,
                                                         ),
                                                       ),
-                                                      if (item.isCustomPrice) ...[
-                                                        const SizedBox(width: 4),
-                                                        const Text('(Spl Price)', style: TextStyle(color: AppColors.primaryLight, fontSize: 9)),
-                                                      ],
                                                       const SizedBox(width: 4),
                                                       const Icon(LucideIcons.edit3, size: 12, color: AppColors.darkSubtext),
                                                     ],
@@ -638,30 +697,45 @@ class _PosScreenState extends State<PosScreen> {
                                 // Buttons: Hold Bill & Checkout
                                 Row(
                                   children: [
-                                    // Hold Bill button
+                                    // Hold Bill / Update Held Bill button
                                     Expanded(
                                       child: OutlinedButton.icon(
                                         style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppColors.warning,
-                                          side: const BorderSide(color: AppColors.warning),
+                                          foregroundColor: cartProv.isEditingPendingOrder ? AppColors.primaryLight : AppColors.warning,
+                                          side: BorderSide(color: cartProv.isEditingPendingOrder ? AppColors.primaryLight : AppColors.warning),
                                           padding: const EdgeInsets.symmetric(vertical: 10),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                         ),
                                         onPressed: cartProv.items.isEmpty
                                             ? null
                                             : () {
-                                                final res = cartProv.parkCurrentBill();
-                                                if (res['success'] == true) {
-                                                  _showSnackBar('${(res['pendingOrder'] as PendingOrder).label} parked in cart queue!');
+                                                if (cartProv.isEditingPendingOrder) {
+                                                  final res = cartProv.saveUpdatedHeldBill();
+                                                  if (res['success'] == true) {
+                                                    _showSnackBar('${(res['pendingOrder'] as PendingOrder).label} updated in Held Bills!');
+                                                    if (!isDesktop) {
+                                                      setState(() => _activeMobileTab = 'pending');
+                                                    }
+                                                  } else {
+                                                    _showSnackBar(res['message'] ?? 'Failed to update held bill', isError: true);
+                                                  }
+                                                } else {
+                                                  final res = cartProv.parkCurrentBill();
+                                                  if (res['success'] == true) {
+                                                    _showSnackBar('${(res['pendingOrder'] as PendingOrder).label} parked in cart queue!');
+                                                  }
                                                 }
                                               },
-                                        icon: const Icon(LucideIcons.clock, size: 14),
-                                        label: const Text('Hold Bill', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                        icon: Icon(cartProv.isEditingPendingOrder ? LucideIcons.save : LucideIcons.clock, size: 14),
+                                        label: Text(
+                                          cartProv.isEditingPendingOrder ? 'Update Bill' : 'Hold Bill',
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
 
-                                    // Complete Checkout
+                                    // Complete Checkout / Print & Save
                                     Expanded(
                                       flex: 2,
                                       child: ElevatedButton.icon(
@@ -673,9 +747,9 @@ class _PosScreenState extends State<PosScreen> {
                                         ),
                                         onPressed: cartProv.items.isEmpty
                                             ? null
-                                            : () => _handleDirectCheckout(context, cartProv, productProv, orderProv, settings),
-                                        icon: const Icon(LucideIcons.checkCircle, size: 16),
-                                        label: const Text('Complete Sale', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                            : () => _handleCartSaveAndPrint(context, cartProv, productProv, orderProv, settings),
+                                        icon: const Icon(LucideIcons.printer, size: 16),
+                                        label: const Text('Print / Save', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                       ),
                                     ),
                                   ],
@@ -790,6 +864,17 @@ class _PosScreenState extends State<PosScreen> {
                     child: const Text('Discard', style: TextStyle(fontSize: 10)),
                   ),
                   const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.warning,
+                      side: const BorderSide(color: AppColors.warning),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    ),
+                    onPressed: () => _handleEditHeldBill(context, pending, cartProv),
+                    icon: const Icon(LucideIcons.edit3, size: 12),
+                    label: const Text('Edit', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -814,6 +899,169 @@ class _PosScreenState extends State<PosScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _handleEditHeldBill(
+    BuildContext context,
+    PendingOrder pending,
+    CartProvider cartProv,
+  ) {
+    if (cartProv.items.isNotEmpty && cartProv.editingPendingOrderId != pending.id) {
+      showDialog(
+        context: context,
+        builder: (_) => ConfirmDialog(
+          title: 'Replace Current Cart?',
+          message: 'Your active cart currently contains ${cartProv.items.length} item(s). Loading "${pending.label}" will replace the current cart items. Do you want to continue?',
+          confirmLabel: 'Load & Edit',
+          onConfirm: () {
+            _startEditingHeldBill(pending, cartProv);
+          },
+        ),
+      );
+    } else {
+      _startEditingHeldBill(pending, cartProv);
+    }
+  }
+
+  void _startEditingHeldBill(PendingOrder pending, CartProvider cartProv) {
+    cartProv.startEditingPendingOrder(pending);
+    setState(() {
+      _activeMobileTab = 'cart';
+    });
+    _showSnackBar('Editing ${pending.label}. Make changes and tap "Update Bill" to save.');
+  }
+
+  void _openHeldBillsDialog(
+    BuildContext context,
+    CartProvider cartProv,
+    ProductProvider productProv,
+    OrderProvider orderProv,
+    BusinessSettings settings,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Dialog(
+        backgroundColor: AppColors.darkCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 520,
+          height: 560,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(LucideIcons.clock, size: 18, color: AppColors.warning),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Held Bills Queue (${cartProv.pendingOrders.length})',
+                        style: const TextStyle(color: AppColors.darkText, fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.x, size: 18, color: AppColors.darkSubtext),
+                    onPressed: () => Navigator.of(dialogCtx).pop(),
+                  ),
+                ],
+              ),
+              const Divider(color: AppColors.darkCardBorder),
+              Expanded(
+                child: cartProv.pendingOrders.isEmpty
+                    ? const Center(
+                        child: Text('No held bills in queue.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
+                      )
+                    : ListView.separated(
+                        itemCount: cartProv.pendingOrders.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (ctx, idx) {
+                          final pending = cartProv.pendingOrders[idx];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.darkInputBg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.darkCardBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(pending.label, style: const TextStyle(color: AppColors.darkText, fontSize: 13, fontWeight: FontWeight.bold)),
+                                    Text(
+                                      Formatters.formatCurrency(pending.grandTotal, settings.currencySymbol),
+                                      style: const TextStyle(color: AppColors.primaryLight, fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text('Cust: ${pending.customerName} • ${pending.itemCount} items (${pending.totalQuantity} total qty)', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.danger,
+                                        side: const BorderSide(color: AppColors.danger),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      ),
+                                      onPressed: () => cartProv.removePendingOrder(pending.id),
+                                      child: const Text('Discard', style: TextStyle(fontSize: 10)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.warning,
+                                        side: const BorderSide(color: AppColors.warning),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(dialogCtx).pop();
+                                        _handleEditHeldBill(context, pending, cartProv);
+                                      },
+                                      icon: const Icon(LucideIcons.edit3, size: 12),
+                                      label: const Text('Edit', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(dialogCtx).pop();
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => ReceiptModal(
+                                            order: pending,
+                                            onSavePendingOrder: (p) => _savePendingToOrders(context, p, productProv, orderProv, cartProv),
+                                            onMarkPrinted: (id) => cartProv.markPendingOrderPrinted(id),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text('Print / Save', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -939,7 +1187,7 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  void _handleDirectCheckout(
+  void _handleCartSaveAndPrint(
     BuildContext context,
     CartProvider cartProv,
     ProductProvider productProv,
@@ -955,31 +1203,21 @@ class _PosScreenState extends State<PosScreen> {
       }
     }
 
-    final orderNo = orderProv.generateNextOrderNumber();
-    final orderItems = cartProv.items
-        .map((i) => OrderItem(
-              productId: i.productId,
-              productName: i.name,
-              sku: i.sku,
-              unitPrice: i.unitPrice,
-              originalPrice: i.originalPrice,
-              isCustomPrice: i.isCustomPrice,
-              quantity: i.quantity,
-              unit: i.unit,
-              lineTotal: i.lineTotal,
-            ))
-        .toList();
-
     final totals = cartProv.getTotals();
-    final newOrder = Order(
-      id: 'ord-${DateTime.now().millisecondsSinceEpoch}',
-      orderNumber: orderNo,
-      createdAt: DateTime.now().toIso8601String(),
+    final custName = cartProv.isWalkIn || cartProv.selectedCustomer == null
+        ? 'Walk-in Customer'
+        : cartProv.selectedCustomer!.name;
+
+    final cartPendingOrder = PendingOrder(
+      id: cartProv.editingPendingOrderId ?? 'pending-cart-${DateTime.now().millisecondsSinceEpoch}',
+      queueNumber: cartProv.editingPendingOrder?.queueNumber ?? (cartProv.pendingOrders.length + 1),
+      label: cartProv.editingPendingOrder?.label ?? 'Bill #${cartProv.pendingOrders.length + 1} ($custName)',
+      createdAt: cartProv.editingPendingOrder?.createdAt ?? DateTime.now().toIso8601String(),
       customerId: cartProv.selectedCustomer?.id,
-      customerName: cartProv.isWalkIn || cartProv.selectedCustomer == null ? 'Walk-in Customer' : cartProv.selectedCustomer!.name,
+      customerName: custName,
       customerPhone: cartProv.selectedCustomer?.phone,
       customerSnapshot: cartProv.selectedCustomer,
-      items: orderItems,
+      items: List.from(cartProv.items),
       itemCount: totals.itemCount,
       totalQuantity: totals.totalQuantity,
       subtotal: totals.subtotal,
@@ -988,71 +1226,96 @@ class _PosScreenState extends State<PosScreen> {
       discountAmount: totals.discountAmount,
       grandTotal: totals.grandTotal,
       paymentMethod: cartProv.paymentMethod,
-      paymentStatus: 'paid',
-      orderStatus: 'completed',
-      isDeleted: false,
+      isPrinted: false,
     );
 
-    // Deduct stock
-    productProv.reduceStock(cartProv.items.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList());
-    orderProv.addOrder(newOrder);
-    cartProv.clearCart();
-
-    // Show Receipt Modal
     showDialog(
       context: context,
-      builder: (_) => ReceiptModal(order: newOrder),
+      builder: (_) => ReceiptModal(
+        order: cartPendingOrder,
+        onSavePendingOrder: (p) => _savePendingToOrders(context, p, productProv, orderProv, cartProv),
+        onMarkPrinted: (id) {
+          if (cartProv.isEditingPendingOrder) {
+            cartProv.markPendingOrderPrinted(id);
+          }
+        },
+      ),
     );
   }
 
-  void _savePendingToOrders(
+  Future<bool> _savePendingToOrders(
     BuildContext context,
     PendingOrder pending,
     ProductProvider productProv,
     OrderProvider orderProv,
     CartProvider cartProv,
-  ) {
-    final orderNo = orderProv.generateNextOrderNumber();
-    final orderItems = pending.items
-        .map((i) => OrderItem(
-              productId: i.productId,
-              productName: i.name,
-              sku: i.sku,
-              unitPrice: i.unitPrice,
-              originalPrice: i.originalPrice,
-              isCustomPrice: i.isCustomPrice,
-              quantity: i.quantity,
-              unit: i.unit,
-              lineTotal: i.lineTotal,
-            ))
-        .toList();
+  ) async {
+    if (pending.items.isEmpty) {
+      _showSnackBar('Cannot save an empty order.', isError: true);
+      return false;
+    }
 
-    final finalOrder = Order(
-      id: 'ord-${DateTime.now().millisecondsSinceEpoch}',
-      orderNumber: orderNo,
-      createdAt: DateTime.now().toIso8601String(),
-      customerId: pending.customerId,
-      customerName: pending.customerName,
-      customerPhone: pending.customerPhone,
-      customerSnapshot: pending.customerSnapshot,
-      items: orderItems,
-      itemCount: pending.itemCount,
-      totalQuantity: pending.totalQuantity,
-      subtotal: pending.subtotal,
-      discountType: pending.discountType,
-      discountValue: pending.discountValue,
-      discountAmount: pending.discountAmount,
-      grandTotal: pending.grandTotal,
-      paymentMethod: pending.paymentMethod,
-      paymentStatus: 'paid',
-      orderStatus: 'completed',
-      isDeleted: false,
-    );
+    // Validate stock before finalizing
+    for (var item in pending.items) {
+      final matchingProduct = productProv.products.where((p) => p.id == item.productId).firstOrNull;
+      if (matchingProduct != null && item.quantity > matchingProduct.stockQuantity) {
+        _showSnackBar('Insufficient stock for "${item.name}". Only ${matchingProduct.stockQuantity} available.', isError: true);
+        return false;
+      }
+    }
 
-    productProv.reduceStock(pending.items.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList());
-    orderProv.addOrder(finalOrder);
-    cartProv.removePendingOrder(pending.id);
-    _showSnackBar('Order $orderNo saved to permanent orders!');
+    try {
+      final orderNo = orderProv.generateNextOrderNumber();
+      final orderItems = pending.items
+          .map((i) => OrderItem(
+                productId: i.productId,
+                productName: i.name,
+                sku: i.sku,
+                unitPrice: i.unitPrice,
+                originalPrice: i.originalPrice,
+                isCustomPrice: i.isCustomPrice,
+                quantity: i.quantity,
+                unit: i.unit,
+                lineTotal: i.lineTotal,
+              ))
+          .toList();
+
+      final finalOrder = Order(
+        id: 'ord-${DateTime.now().millisecondsSinceEpoch}',
+        orderNumber: orderNo,
+        createdAt: DateTime.now().toIso8601String(),
+        customerId: pending.customerId,
+        customerName: pending.customerName,
+        customerPhone: pending.customerPhone,
+        customerSnapshot: pending.customerSnapshot,
+        items: orderItems,
+        itemCount: pending.itemCount,
+        totalQuantity: pending.totalQuantity,
+        subtotal: pending.subtotal,
+        discountType: pending.discountType,
+        discountValue: pending.discountValue,
+        discountAmount: pending.discountAmount,
+        grandTotal: pending.grandTotal,
+        paymentMethod: pending.paymentMethod,
+        paymentStatus: 'paid',
+        orderStatus: 'completed',
+        isDeleted: false,
+      );
+
+      productProv.reduceStock(
+        pending.items
+            .map((i) => <String, dynamic>{'productId': i.productId, 'quantity': i.quantity})
+            .toList(),
+      );
+      orderProv.addOrder(finalOrder);
+      cartProv.removePendingOrder(pending.id);
+      cartProv.clearCart();
+      _showSnackBar('Order $orderNo saved to permanent orders!');
+      return true;
+    } catch (e) {
+      _showSnackBar('Failed to save order: ${e.toString()}', isError: true);
+      return false;
+    }
   }
 }
 

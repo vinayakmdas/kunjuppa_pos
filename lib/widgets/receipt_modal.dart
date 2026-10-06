@@ -13,7 +13,7 @@ import 'printer_config_modal.dart';
 
 class ReceiptModal extends StatefulWidget {
   final dynamic order; // Order or PendingOrder
-  final Function(PendingOrder)? onSavePendingOrder;
+  final Future<bool> Function(PendingOrder)? onSavePendingOrder;
   final Function(String)? onMarkPrinted;
 
   const ReceiptModal({
@@ -30,6 +30,7 @@ class ReceiptModal extends StatefulWidget {
 class _ReceiptModalState extends State<ReceiptModal> {
   late String _activeWidth;
   bool _hasPrintedLocally = false;
+  bool _isSavingOrder = false;
 
   @override
   void initState() {
@@ -459,25 +460,16 @@ class _ReceiptModalState extends State<ReceiptModal> {
                       final String unit = item.unit;
                       final double unitPrice = item.unitPrice;
                       final double total = item.lineTotal;
-                      final bool isCustom = item.isCustomPrice;
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    name,
-                                    style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isCustom)
-                                  const Text(' (Spl)', style: TextStyle(color: Colors.green, fontSize: 8, fontFamily: 'monospace')),
-                              ],
+                            Text(
+                              name,
+                              style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -714,12 +706,36 @@ class _ReceiptModalState extends State<ReceiptModal> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: () {
-                      widget.onSavePendingOrder!(widget.order as PendingOrder);
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(LucideIcons.save, size: 14),
-                    label: const Text('Save to Orders Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    onPressed: _isSavingOrder
+                        ? null
+                        : () async {
+                            setState(() => _isSavingOrder = true);
+                            try {
+                              final success = await widget.onSavePendingOrder!(widget.order as PendingOrder);
+                              if (mounted && success) {
+                                Navigator.of(context).pop(true);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                _showSnackBar('Failed to save order: ${e.toString()}', isError: true);
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isSavingOrder = false);
+                              }
+                            }
+                          },
+                    icon: _isSavingOrder
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(LucideIcons.save, size: 14),
+                    label: Text(
+                      _isSavingOrder ? 'Saving Order...' : 'Save to Orders Now',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
