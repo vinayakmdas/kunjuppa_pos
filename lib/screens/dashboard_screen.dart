@@ -112,9 +112,14 @@ class DashboardScreen extends StatelessWidget {
           // Metric Cards Grid
           LayoutBuilder(
             builder: (context, constraints) {
-              final double cardWidth = constraints.maxWidth > 800
-                  ? (constraints.maxWidth - 48) / 4
-                  : (constraints.maxWidth > 500 ? (constraints.maxWidth - 16) / 2 : constraints.maxWidth);
+              final double cardWidth;
+              if (constraints.maxWidth >= 900) {
+                cardWidth = (constraints.maxWidth - 48) / 4;
+              } else if (constraints.maxWidth >= 520) {
+                cardWidth = (constraints.maxWidth - 16) / 2;
+              } else {
+                cardWidth = constraints.maxWidth;
+              }
 
               return Wrap(
                 spacing: 16,
@@ -167,179 +172,207 @@ class DashboardScreen extends StatelessWidget {
             builder: (context, constraints) {
               final bool isWide = constraints.maxWidth >= 900;
 
-              return Flex(
-                direction: isWide ? Axis.horizontal : Axis.vertical,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Recent Orders Table
-                  Expanded(
-                    flex: isWide ? 6 : 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkCard,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.darkCardBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: const [
-                              Text('Recent Sales', style: TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold)),
-                              Text('Latest completed transactions', style: TextStyle(color: AppColors.darkSubtext, fontSize: 10)),
-                            ],
+              final Widget recentSalesCard = Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.darkCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.darkCardBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('Recent Sales', style: TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Latest completed transactions',
+                            style: TextStyle(color: AppColors.darkSubtext, fontSize: 10),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
                           ),
-                          const SizedBox(height: 12),
-
-                          displayRecent.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.all(24),
-                                  child: Center(
-                                    child: Text('No completed orders yet.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
-                                  ),
-                                )
-                              : SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(
-                                    columnSpacing: 16,
-                                    headingRowHeight: 36,
-                                    dataRowHeight: 44,
-                                    columns: const [
-                                      DataColumn(label: Text('Order #', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text('Customer', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text('Date', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text('Total', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text('Payment', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text('Receipt', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
-                                    ],
-                                    rows: displayRecent.map((order) {
-                                      return DataRow(
-                                        cells: [
-                                          DataCell(Text(order.orderNumber, style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'))),
-                                          DataCell(Text(order.customerName, style: const TextStyle(color: AppColors.darkText, fontSize: 12))),
-                                          DataCell(Text(Formatters.formatDateTime(order.createdAt), style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11))),
-                                          DataCell(Text(Formatters.formatCurrency(order.grandTotal, settings.currencySymbol), style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold))),
-                                          DataCell(
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.primary.withValues(alpha: 0.15),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: Text(order.paymentMethod.toUpperCase(), style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold)),
-                                            ),
-                                          ),
-                                          DataCell(
-                                            IconButton(
-                                              icon: const Icon(LucideIcons.receipt, size: 16, color: AppColors.primaryLight),
-                                              onPressed: () {
-                                                showDialog(
-                                                  context: context,
-                                                  builder: (_) => ReceiptModal(order: order),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 12),
 
-                  if (isWide) const SizedBox(width: 16) else const SizedBox(height: 16),
-
-                  // Stock Alerts Column
-                  Expanded(
-                    flex: isWide ? 4 : 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkCard,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.darkCardBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(LucideIcons.alertTriangle, color: AppColors.warning, size: 18),
-                              const SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Stock Level Alerts', style: TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold)),
-                                  Text('Below limit of ${settings.lowStockThreshold} units', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10)),
-                                ],
-                              ),
-                            ],
+                    displayRecent.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Center(
+                              child: Text('No completed orders yet.', style: TextStyle(color: AppColors.darkSubtext, fontSize: 12)),
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              columnSpacing: 16,
+                              headingRowHeight: 36,
+                              dataRowMaxHeight: 48,
+                              dataRowMinHeight: 40,
+                              columns: const [
+                                DataColumn(label: Text('Order #', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Customer', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Date', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Total', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Payment', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text('Receipt', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11, fontWeight: FontWeight.bold))),
+                              ],
+                              rows: displayRecent.map((order) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(Text(order.orderNumber, style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'))),
+                                    DataCell(Text(order.customerName, style: const TextStyle(color: AppColors.darkText, fontSize: 12))),
+                                    DataCell(Text(Formatters.formatDateTime(order.createdAt), style: const TextStyle(color: AppColors.darkSubtext, fontSize: 11))),
+                                    DataCell(Text(Formatters.formatCurrency(order.grandTotal, settings.currencySymbol), style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold))),
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(order.paymentMethod.toUpperCase(), style: const TextStyle(color: AppColors.primaryLight, fontSize: 10, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      IconButton(
+                                        icon: const Icon(LucideIcons.receipt, size: 16, color: AppColors.primaryLight),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => ReceiptModal(order: order),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
                           ),
-                          const SizedBox(height: 12),
-
-                          lowStockProducts.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.all(20),
-                                  child: Center(
-                                    child: Text('All products have healthy inventory levels!', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
-                                  ),
-                                )
-                              : ListView.separated(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: lowStockProducts.length,
-                                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                                  itemBuilder: (context, idx) {
-                                    final p = lowStockProducts[idx];
-                                    final bool isOut = p.stockQuantity <= 0;
-
-                                    return Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.darkInputBg,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(p.name, style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold)),
-                                              Text('SKU: ${p.sku} • ${p.category}', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10)),
-                                            ],
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: isOut ? AppColors.danger.withValues(alpha: 0.2) : AppColors.warning.withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              '${p.stockQuantity} ${p.unit}',
-                                              style: TextStyle(
-                                                color: isOut ? Colors.redAccent : AppColors.warning,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               );
+
+              final Widget stockAlertsCard = Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.darkCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.darkCardBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.alertTriangle, color: AppColors.warning, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Stock Level Alerts', style: TextStyle(color: AppColors.darkText, fontSize: 14, fontWeight: FontWeight.bold)),
+                              Text('Below limit of ${settings.lowStockThreshold} units', style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10), overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    lowStockProducts.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(
+                              child: Text('All products have healthy inventory levels!', style: TextStyle(color: AppColors.darkSubtext, fontSize: 11)),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: lowStockProducts.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemBuilder: (context, idx) {
+                              final p = lowStockProducts[idx];
+                              final bool isOut = p.stockQuantity <= 0;
+
+                              return Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.darkInputBg,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            p.name,
+                                            style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          Text(
+                                            'SKU: ${p.sku} • ${p.category}',
+                                            style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isOut ? AppColors.danger.withValues(alpha: 0.2) : AppColors.warning.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${p.stockQuantity} ${p.unit}',
+                                        style: TextStyle(
+                                          color: isOut ? Colors.redAccent : AppColors.warning,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ],
+                ),
+              );
+
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 6, child: recentSalesCard),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 4, child: stockAlertsCard),
+                  ],
+                );
+              } else {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    recentSalesCard,
+                    const SizedBox(height: 16),
+                    stockAlertsCard,
+                  ],
+                );
+              }
             },
           ),
         ],
@@ -369,7 +402,15 @@ class DashboardScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -381,11 +422,22 @@ class DashboardScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: AppColors.darkText, fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(color: AppColors.darkText, fontSize: 20, fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
           const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10)),
+          Text(
+            subtitle,
+            style: const TextStyle(color: AppColors.darkSubtext, fontSize: 10),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
         ],
       ),
     );
   }
 }
+

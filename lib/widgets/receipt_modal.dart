@@ -482,7 +482,7 @@ class _ReceiptModalState extends State<ReceiptModal> {
                                   ),
                                 ),
                                 Text(
-                                  '${settings.currencySymbol} ${total.toStringAsFixed(2)}',
+                                  total % 1 == 0 ? total.toStringAsFixed(0) : total.toStringAsFixed(2),
                                   style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                                 ),
                               ],

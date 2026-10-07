@@ -1,15 +1,42 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../models/business_settings.dart';
 import '../services/bluetooth_printer_service.dart';
 
 enum PrinterStatus { disconnected, connecting, connected, unsupported }
 
-class PrinterProvider extends ChangeNotifier {
+class PrinterProvider extends ChangeNotifier with WidgetsBindingObserver {
   PrinterDevice? _connectedDevice;
   PrinterStatus _status = PrinterStatus.disconnected;
   List<PrinterDevice> _availablePrinters = [];
   bool _isScanning = false;
   bool _isPrinting = false;
+
+  PrinterProvider() {
+    WidgetsBinding.instance.addObserver(this);
+    _initServiceListener();
+  }
+
+  void _initServiceListener() {
+    BluetoothPrinterService.instance.onStatusChanged = (isConnected, device) {
+      _connectedDevice = device;
+      _status = isConnected ? PrinterStatus.connected : PrinterStatus.disconnected;
+      notifyListeners();
+    };
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-verify connection status when returning to foreground
+      checkConnectionStatus();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   PrinterDevice? get connectedDevice => _connectedDevice;
   PrinterStatus get status => _status;
@@ -19,20 +46,28 @@ class PrinterProvider extends ChangeNotifier {
 
   String? get deviceName => _connectedDevice?.name;
 
+  Future<bool> checkConnectionStatus() async {
+    final healthy = await BluetoothPrinterService.instance.checkConnectionStatus();
+    _connectedDevice = BluetoothPrinterService.instance.connectedDevice;
+    _status = healthy ? PrinterStatus.connected : PrinterStatus.disconnected;
+    notifyListeners();
+    return healthy;
+  }
+
   Future<void> scanPrinters() async {
     _isScanning = true;
     notifyListeners();
 
-    final hasPermission = await BluetoothPrinterService.instance
-        .requestPermissions();
+    await checkConnectionStatus();
+
+    final hasPermission = await BluetoothPrinterService.instance.requestPermissions();
     if (!hasPermission) {
       _isScanning = false;
       notifyListeners();
       return;
     }
 
-    final isBtEnabled = await BluetoothPrinterService.instance
-        .isBluetoothEnabled();
+    final isBtEnabled = await BluetoothPrinterService.instance.isBluetoothEnabled();
     if (!isBtEnabled) {
       _status = PrinterStatus.unsupported;
       _isScanning = false;
@@ -40,8 +75,7 @@ class PrinterProvider extends ChangeNotifier {
       return;
     }
 
-    _availablePrinters = await BluetoothPrinterService.instance
-        .getBluetoothPrinters();
+    _availablePrinters = await BluetoothPrinterService.instance.getBluetoothPrinters();
     _isScanning = false;
     notifyListeners();
   }

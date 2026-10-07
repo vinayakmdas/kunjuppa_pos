@@ -26,6 +26,7 @@ class CartProvider extends ChangeNotifier {
   List<CartItem> _items = [];
   Customer? _selectedCustomer;
   bool _isWalkIn = true;
+  bool _hasCustomerSelected = false;
   String _discountType = 'fixed'; // 'percentage' | 'fixed'
   double _discountValue = 0.0;
   String _paymentMethod = 'cash'; // 'cash' | 'upi' | 'card'
@@ -36,6 +37,7 @@ class CartProvider extends ChangeNotifier {
   List<CartItem> get items => _items;
   Customer? get selectedCustomer => _selectedCustomer;
   bool get isWalkIn => _isWalkIn;
+  bool get hasCustomerSelected => _hasCustomerSelected;
   String get discountType => _discountType;
   double get discountValue => _discountValue;
   String get paymentMethod => _paymentMethod;
@@ -54,6 +56,9 @@ class CartProvider extends ChangeNotifier {
   }
 
   Map<String, dynamic> addItem(Product product, [int quantity = 1]) {
+    if (!_hasCustomerSelected) {
+      return {'success': false, 'message': 'Please select a customer first.'};
+    }
     if (product.isDeleted) {
       return {'success': false, 'message': 'Cannot add an archived product.'};
     }
@@ -171,6 +176,7 @@ class CartProvider extends ChangeNotifier {
     _discountValue = 0.0;
     _selectedCustomer = null;
     _isWalkIn = true;
+    _hasCustomerSelected = false;
     _paymentMethod = 'cash';
     _editingPendingOrderId = null;
     _editingPendingOrder = null;
@@ -180,12 +186,14 @@ class CartProvider extends ChangeNotifier {
   void setSelectedCustomer(Customer? customer) {
     _selectedCustomer = customer;
     _isWalkIn = customer == null;
+    _hasCustomerSelected = true;
     notifyListeners();
   }
 
   void setWalkIn(bool walkIn) {
     _isWalkIn = walkIn;
     if (walkIn) _selectedCustomer = null;
+    _hasCustomerSelected = true;
     notifyListeners();
   }
 
@@ -271,6 +279,7 @@ class CartProvider extends ChangeNotifier {
     _items = List.from(pending.items);
     _selectedCustomer = pending.customerSnapshot;
     _isWalkIn = pending.customerId == null;
+    _hasCustomerSelected = true;
     _discountType = pending.discountType;
     _discountValue = pending.discountValue;
     _paymentMethod = pending.paymentMethod;
@@ -360,6 +369,7 @@ class CartProvider extends ChangeNotifier {
     _items = List.from(found.items);
     _selectedCustomer = found.customerSnapshot;
     _isWalkIn = found.customerId == null;
+    _hasCustomerSelected = true;
     _discountType = found.discountType;
     _discountValue = found.discountValue;
     _paymentMethod = found.paymentMethod;

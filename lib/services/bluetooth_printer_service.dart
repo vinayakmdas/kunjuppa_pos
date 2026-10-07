@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:flutter/foundation.dart';
@@ -18,17 +19,71 @@ class PrinterDevice {
   });
 }
 
+/// Simple zero-dependency async lock to enforce FIFO execution queue
+class _AsyncLock {
+  Future<void>? _lastOperation;
+
+  Future<T> run<T>(Future<T> Function() action) async {
+    final previous = _lastOperation;
+    final completer = Completer<void>();
+    _lastOperation = completer.future;
+
+    if (previous != null) {
+      try {
+        await previous;
+      } catch (_) {}
+    }
+
+    try {
+      return await action();
+    } finally {
+      completer.complete();
+    }
+  }
+}
+
 class BluetoothPrinterService {
   static final BluetoothPrinterService instance = BluetoothPrinterService._internal();
   BluetoothPrinterService._internal();
 
   final BlueThermalPrinter _bluetooth = BlueThermalPrinter.instance;
 
+  // Transmission pacing constants for ESC/POS stability
+  static const int chunkSize = 150; // bytes per chunk
+  static const int chunkDelayMs = 35; // delay between chunks in ms
+
   PrinterDevice? _connectedDevice;
+  PrinterDevice? _lastTargetDevice;
   bool _isConnected = false;
+  bool _isConnecting = false;
+
+  void Function(bool isConnected, PrinterDevice? device)? onStatusChanged;
+
+  final _AsyncLock _printQueueLock = _AsyncLock();
 
   PrinterDevice? get connectedDevice => _connectedDevice;
   bool get isConnected => _isConnected;
+  bool get isConnecting => _isConnecting;
+
+  void _notifyStatus(bool isConnected, PrinterDevice? device) {
+    _isConnected = isConnected;
+    _connectedDevice = device;
+    if (isConnected && device != null) {
+      _lastTargetDevice = device;
+    }
+    onStatusChanged?.call(isConnected, device);
+  }
+
+  /// Internal cleanup to ensure zero stale native connections or state
+  Future<void> _cleanupConnection() async {
+    try {
+      await _bluetooth.disconnect();
+    } catch (e) {
+      debugPrint('Bluetooth disconnect cleanup exception: $e');
+    } finally {
+      _notifyStatus(false, null);
+    }
+  }
 
   /// Request required Bluetooth & Location permissions on Android / iOS
   Future<bool> requestPermissions() async {
@@ -79,52 +134,87 @@ class BluetoothPrinterService {
     }
   }
 
-  /// Connect to selected Bluetooth printer
+  /// Connect to selected Bluetooth printer safely with state validation
   Future<Map<String, dynamic>> connect(PrinterDevice device) async {
+    if (_isConnecting) {
+      return {
+        'success': false,
+        'message': 'Connection attempt already in progress.',
+      };
+    }
+
+    // Reuse healthy existing connection if connecting to the same device
+    if (_isConnected && _connectedDevice?.macAddress == device.macAddress) {
+      final isHealthy = await checkConnectionStatus();
+      if (isHealthy) {
+        return {
+          'success': true,
+          'message': 'Already connected to ${device.name}.',
+        };
+      }
+    }
+
+    _isConnecting = true;
     try {
+      // Disconnect previous socket cleanly before establishing new connection
+      await _cleanupConnection();
+
       await _bluetooth.connect(device.rawDevice);
-      _connectedDevice = device;
-      _isConnected = true;
+      _notifyStatus(true, device);
       return {
         'success': true,
         'message': 'Connected to ${device.name} successfully!',
       };
     } catch (e) {
-      _isConnected = false;
-      _connectedDevice = null;
+      await _cleanupConnection();
       return {
         'success': false,
         'message': 'Error connecting to printer: ${e.toString()}',
       };
+    } finally {
+      _isConnecting = false;
     }
   }
 
-  /// Disconnect current printer
+  /// Disconnect current printer and reset state cleanly
   Future<void> disconnect() async {
-    try {
-      await _bluetooth.disconnect();
-    } catch (_) {}
-    _connectedDevice = null;
-    _isConnected = false;
+    await _cleanupConnection();
   }
 
-  /// Update / verify connection status
+  /// Update / verify connection status with native socket
   Future<bool> checkConnectionStatus() async {
     try {
       final bool? status = await _bluetooth.isConnected;
-      _isConnected = status ?? false;
-      if (!_isConnected) _connectedDevice = null;
-      return _isConnected;
+      if (status == true && _connectedDevice != null) {
+        _notifyStatus(true, _connectedDevice);
+        return true;
+      } else {
+        await _cleanupConnection();
+        return false;
+      }
     } catch (e) {
-      _isConnected = false;
-      _connectedDevice = null;
+      await _cleanupConnection();
       return false;
     }
   }
 
-  /// Print raw ESC/POS bytes to connected Bluetooth printer
-  Future<Map<String, dynamic>> printRawBytes(List<int> bytes) async {
-    final status = await checkConnectionStatus();
+  /// Print raw ESC/POS bytes safely via FIFO queue, chunking, and auto-recovery
+  Future<Map<String, dynamic>> printRawBytes(List<int> bytes, {bool isRetry = false}) async {
+    return _printQueueLock.run(() async {
+      return _executePrintTransmission(bytes, isRetry: isRetry);
+    });
+  }
+
+  Future<Map<String, dynamic>> _executePrintTransmission(List<int> bytes, {required bool isRetry}) async {
+    bool status = await checkConnectionStatus();
+
+    // Auto-reconnect attempt if connection was lost before starting print job
+    if (!status && _lastTargetDevice != null && !isRetry) {
+      debugPrint('Printer connection lost. Attempting 1-step auto-reconnect...');
+      final reConn = await connect(_lastTargetDevice!);
+      status = reConn['success'] == true;
+    }
+
     if (!status) {
       return {
         'success': false,
@@ -134,9 +224,32 @@ class BluetoothPrinterService {
 
     try {
       final Uint8List data = Uint8List.fromList(bytes);
-      await _bluetooth.writeBytes(data);
+
+      // Paced chunked write to prevent buffer overflow and RFCOMM socket crashes
+      for (int i = 0; i < data.length; i += chunkSize) {
+        final end = (i + chunkSize < data.length) ? i + chunkSize : data.length;
+        final chunk = Uint8List.sublistView(data, i, end);
+        await _bluetooth.writeBytes(chunk);
+
+        if (end < data.length) {
+          await Future.delayed(const Duration(milliseconds: chunkDelayMs));
+        }
+      }
+
       return {'success': true, 'message': 'Printed successfully via Bluetooth!'};
     } catch (e) {
+      debugPrint('Write exception caught during printing: $e');
+      await _cleanupConnection();
+
+      // Controlled single retry attempt
+      if (!isRetry && _lastTargetDevice != null) {
+        debugPrint('Attempting controlled auto-recovery retry...');
+        final reConn = await connect(_lastTargetDevice!);
+        if (reConn['success'] == true) {
+          return _executePrintTransmission(bytes, isRetry: true);
+        }
+      }
+
       return {'success': false, 'message': 'Print error: ${e.toString()}'};
     }
   }
@@ -251,7 +364,7 @@ class BluetoothPrinterService {
       final String unit = item.unit;
       final double lineTotal = item.lineTotal;
 
-      final String totalStr = '${settings.currencySymbol} ${lineTotal.toStringAsFixed(2)}';
+      final String totalStr = lineTotal % 1 == 0 ? lineTotal.toStringAsFixed(0) : lineTotal.toStringAsFixed(2);
       final String qtyStr = '$qty $unit';
 
       if (is58mm) {

@@ -35,13 +35,13 @@ class MainShellScreenState extends State<MainShellScreen> {
     });
   }
 
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    PosScreen(),
-    ProductsScreen(),
-    CustomersScreen(),
-    OrdersScreen(),
-    SettingsScreen(),
+  List<Widget> get _screens => [
+    const DashboardScreen(),
+    PosScreen(isActive: _currentIndex == 1),
+    const ProductsScreen(),
+    const CustomersScreen(),
+    const OrdersScreen(),
+    const SettingsScreen(),
   ];
 
   final List<String> _titles = const [

@@ -18,7 +18,8 @@ import '../widgets/confirm_dialog.dart';
 import '../widgets/receipt_modal.dart';
 
 class PosScreen extends StatefulWidget {
-  const PosScreen({super.key});
+  final bool isActive;
+  const PosScreen({super.key, this.isActive = true});
 
   @override
   State<PosScreen> createState() => _PosScreenState();
@@ -27,6 +28,10 @@ class PosScreen extends StatefulWidget {
 class _PosScreenState extends State<PosScreen> {
   // Mobile / Tablet Tab view: 'catalog' | 'cart' | 'pending'
   String _activeMobileTab = 'catalog';
+
+  // State flags for Customer-first workflow
+  bool _isCustomerPickerOpen = false;
+  bool _autoPromptedForCustomer = false;
 
   // Search & Filters
   final _searchController = TextEditingController();
@@ -71,6 +76,12 @@ class _PosScreenState extends State<PosScreen> {
   // ───────────────────────── product card ─────────────────────────
 
   void _addOne(Product product, CartProvider cartProv) {
+    if (!cartProv.hasCustomerSelected) {
+      _showSnackBar('Please select a customer first.', isError: true);
+      final customerProv = context.read<CustomerProvider>();
+      _openCustomerPickerModal(context, customerProv.getActiveCustomers());
+      return;
+    }
     final res = cartProv.addItem(product, 1);
     if (res['success'] != true && res['message'] != null) {
       _showSnackBar(res['message'], isError: true);
@@ -261,6 +272,24 @@ class _PosScreenState extends State<PosScreen> {
     final activeProducts = productProv.getActiveProducts();
     final activeCustomers = customerProv.getActiveCustomers();
 
+    if (!widget.isActive || cartProv.hasCustomerSelected) {
+      _autoPromptedForCustomer = false;
+    } else if (widget.isActive && !cartProv.isEditingPendingOrder && !_autoPromptedForCustomer && !_isCustomerPickerOpen) {
+      _autoPromptedForCustomer = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.isActive && !cartProv.hasCustomerSelected && !cartProv.isEditingPendingOrder && !_isCustomerPickerOpen) {
+          _isCustomerPickerOpen = true;
+          _openCustomerPickerModal(context, activeCustomers).then((_) {
+            if (mounted) {
+              setState(() {
+                _isCustomerPickerOpen = false;
+              });
+            }
+          });
+        }
+      });
+    }
+
     // Unique Categories
     final categories = ['All', ...activeProducts.map((p) => p.category).toSet()];
 
@@ -371,6 +400,49 @@ class _PosScreenState extends State<PosScreen> {
                           ),
                         ),
 
+                        if (!cartProv.hasCustomerSelected)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            margin: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(LucideIcons.userPlus, color: AppColors.primaryLight, size: 18),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Customer Selection Required',
+                                        style: TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        'Please select a customer first before adding products to cart.',
+                                        style: TextStyle(color: AppColors.darkSubtext, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  onPressed: () => _openCustomerPickerModal(context, activeCustomers),
+                                  icon: const Icon(LucideIcons.userCheck, size: 14),
+                                  label: const Text('Select Customer', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          ),
+
                         // Products Grid
                         Expanded(
                           child: filteredProducts.isEmpty
@@ -431,10 +503,16 @@ class _PosScreenState extends State<PosScreen> {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              cartProv.isWalkIn || cartProv.selectedCustomer == null
-                                                  ? 'Walk-in Customer'
-                                                  : cartProv.selectedCustomer!.name,
-                                              style: const TextStyle(color: AppColors.darkText, fontSize: 12, fontWeight: FontWeight.bold),
+                                              !cartProv.hasCustomerSelected
+                                                  ? 'Select Customer'
+                                                  : cartProv.isWalkIn || cartProv.selectedCustomer == null
+                                                      ? 'Walk-in Customer'
+                                                      : cartProv.selectedCustomer!.name,
+                                              style: TextStyle(
+                                                color: !cartProv.hasCustomerSelected ? AppColors.warning : AppColors.darkText,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -1115,8 +1193,11 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  void _openCustomerPickerModal(BuildContext context, List<Customer> activeCustomers) {
-    showDialog(
+  Future<void> _openCustomerPickerModal(BuildContext context, List<Customer> activeCustomers) {
+    _customerSearch = '';
+    _customerSearchController.clear();
+
+    return showDialog(
       context: context,
       builder: (ctx) => StatefulWidgetBuilder(
         builder: (context, setModalState) {
@@ -1154,6 +1235,7 @@ class _PosScreenState extends State<PosScreen> {
                   const Divider(color: AppColors.darkCardBorder),
 
                   TextField(
+                    controller: _customerSearchController,
                     style: const TextStyle(color: AppColors.darkText, fontSize: 12),
                     decoration: const InputDecoration(hintText: 'Search customer by name or phone...'),
                     onChanged: (val) => setModalState(() => _customerSearch = val),
